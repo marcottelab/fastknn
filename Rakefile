@@ -15,4 +15,4 @@ end
 
 Rake::ExtensionTask.new('phenomatrix')
 Rake::ExtensionTask.new('distance_matrix')
-
+Rake::ExtensionTask.new('classifier')
