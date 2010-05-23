@@ -213,6 +213,7 @@ public:
     }
 
     bool has_column(uint j) const {
+	cerr << "phenomatrix.h: has_column: on matrix " << id_ << ", requested col " << j << " and result will be " << (obs->find(j) != obs->end()) << endl;
         return (obs->find(j) != obs->end());
     }
     
