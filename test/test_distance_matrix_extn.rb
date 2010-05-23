@@ -17,7 +17,7 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
 #  end
 
   def test_intersection_size
-    @d ||= DistanceMatrix.new("dbname=crossval_development user=jwoods password=youwish1", 185, 3, "hypergeometric")
+    @d ||= DistanceMatrix.new("dbname=crossval_development user=jwoods password=youwish1", 185, [3], "hypergeometric")
     #sz = @d.intersection_size(12, 5143)
     #STDERR.puts "intersection between 12 and 5143 is equal to #{sz}"
     assert @d.intersection_size(12, 5143) == 6
@@ -25,7 +25,7 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
   end
 
   def test_nearest
-    @d ||= DistanceMatrix.new("dbname=crossval_development user=jwoods password=youwish1", 185, 3, "hypergeometric")
+    @d ||= DistanceMatrix.new("dbname=crossval_development user=jwoods password=youwish1", 185, [3], "hypergeometric")
     STDERR.puts "Nearest: #{@d.nearest(12)}"
     STDERR.puts "Distance: #{@d.nearest_distance(12)}"
   end
