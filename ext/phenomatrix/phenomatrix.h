@@ -105,13 +105,10 @@ public:
       max_row_count_(rhs.max_row_count_),
       root_id_(rhs.root_id_),
       parent_id_(rhs.parent_id_),
-      type_(rhs.type_)
+      type_(rhs.type_),
+      obs(new omatrix(*(rhs.obs)))
     {
         cerr << "phenomatrix.h: Copy constructor called! id = " << id_ << endl;
-        // Copy the matrix contents.
-        obs = new omatrix(column_ids_.size());
-        for (omatrix::const_iterator rt = obs->begin(); rt != obs->end(); ++rt)
-            (*obs)[rt->first] = rt->second;
     }
 
     ~Phenomatrix() {
