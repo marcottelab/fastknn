@@ -73,8 +73,11 @@ public:
     // Find source matrix by columns
     list<Phenomatrix>::const_iterator find_source_matrix_by_column(uint j) const {
         for (list<Phenomatrix>::const_iterator dt = source_matrices.begin(); dt != source_matrices.end(); ++dt) {
-            if (dt->has_column(j))
+            cerr << "distance_matrix.h: find_source_matrix_by_column: Checking matrix " << dt->id() << endl;
+            if (dt->has_column(j)) {
+                cerr << "\t...found on " << dt->id() << endl;
                 return dt;
+            }
         }
         cerr << "distance_matrix.h: Warning: source matrix with column " << j << " was not found." << endl;
         return source_matrices.end(); // not found
@@ -147,18 +150,22 @@ public:
     // Get the items that are common between j1 in predict matrix and j2 in
     // source matrix
     id_set intersection(uint j1, uint j2) const {
-        list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
-
         cerr << "intersection(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
-
+        
+        list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
+        if (f == source_matrices.end())
+            return id_set(); // empty
+        
         return intersection_given_matrix(j1, f, j2);
     }
 
     // Count the number of items in common between j1 and j2 (j1 in predict matrix, j2 in a source matrix)
     size_t intersection_size(uint j1, uint j2) const {
-        list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
-
         cerr << "intersection_size(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
+        
+        list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
+        if (f == source_matrices.end())
+            return id_set(); // empty
 
         return intersection_size_given_matrix(j1, f, j2);
     }
@@ -192,7 +199,7 @@ public:
         return ids;
     }
 
-//    // These are the same as predict_parent_id and source_parent_id, but they
+//    // These are the same as predict_parent_id and source_parent_id, but theyfind_
 //    // return Ruby nil instead of 0
 //    Rice::Object rb_predict_parent_id() {
 //        uint id = predict_parent_id();
@@ -234,7 +241,7 @@ protected:
 
     id_set intersection_given_matrix(const uint& j1, list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j2) const {
 
-        cerr << "intersection_given_matrix(3): source matrix = " << source_matrix_iter->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
+        cerr << "distance_matrix.h: intersection_given_matrix(3): source matrix = " << source_matrix_iter->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
 
         id_set s1 = predict_matrix_.observations(j1);
         id_set s2 = source_matrix_iter->observations(j2);
@@ -246,7 +253,7 @@ protected:
     }
 
     size_t intersection_size_given_matrix(const uint& j1, list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j2) const {
-        cerr << "intersection_size_given_matrix(3): source matrix = " << source_matrix_iter->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
+        cerr << "distance_matrix.h: intersection_size_given_matrix(3): source matrix = " << source_matrix_iter->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
         return intersection_given_matrix(j1, source_matrix_iter, j2).size();
     }
 
