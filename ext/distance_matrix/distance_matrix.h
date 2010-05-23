@@ -71,19 +71,27 @@ public:
     //}
 
     // Find source matrix by columns
-    list<Phenomatrix>::const_iterator find_source_matrix(uint j) const {
+    list<Phenomatrix>::const_iterator find_source_matrix_by_column(uint j) const {
         for (list<Phenomatrix>::const_iterator dt = source_matrices.begin(); dt != source_matrices.end(); ++dt) {
             if (dt->has_column(j))
                 return dt;
         }
-        cerr << "distance_matrix.h: Warning: source matrix with id " << j << " was not found." << endl;
+        cerr << "distance_matrix.h: Warning: source matrix with column " << j << " was not found." << endl;
+        return source_matrices.end(); // not found
+    }
+
+    // Find source matrix by columns
+    list<Phenomatrix>::const_iterator find_source_matrix_by_id(uint id) const {
+        for (list<Phenomatrix>::const_iterator dt = source_matrices.begin(); dt != source_matrices.end(); ++dt)
+            if (dt->id() == id) return dt;
+        cerr << "distance_matrix.h: Warning: source matrix with id " << id << " was not found." << endl;
         return source_matrices.end(); // not found
     }
 
     // Return the distance, according to our distance function, between the two
     // columns.
     double distance(uint j1, uint j2) const {
-        list<Phenomatrix>::const_iterator j2source = find_source_matrix(j2);
+        list<Phenomatrix>::const_iterator j2source = find_source_matrix_by_column(j2);
         if (j2source != source_matrices.end())
             return distance_given_matrix(j1, j2source, j2);
         return 1.0;
@@ -139,7 +147,7 @@ public:
     // Get the items that are common between j1 in predict matrix and j2 in
     // source matrix
     id_set intersection(uint j1, uint j2) const {
-        list<Phenomatrix>::const_iterator f = find_source_matrix(j2);
+        list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
 
         cerr << "intersection(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
 
@@ -148,7 +156,7 @@ public:
 
     // Count the number of items in common between j1 and j2 (j1 in predict matrix, j2 in a source matrix)
     size_t intersection_size(uint j1, uint j2) const {
-        list<Phenomatrix>::const_iterator f = find_source_matrix(j2);
+        list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
 
         cerr << "intersection_size(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
 
@@ -167,7 +175,7 @@ public:
     // Return the distance, according to our distance function, between the two
     // columns.
     Rice::Object rb_distance(uint j1, uint j2) const {
-        list<Phenomatrix>::const_iterator j2source = find_source_matrix(j2);
+        list<Phenomatrix>::const_iterator j2source = find_source_matrix_by_column(j2);
         if (j2source != source_matrices.end())
             return to_ruby<double>((*distance_function)(
                                         predict_matrix_.observations_size(j1),
