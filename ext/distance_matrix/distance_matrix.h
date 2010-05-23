@@ -42,14 +42,12 @@ class DistanceMatrix {
 public:
 #ifdef RICE
     DistanceMatrix(const string& dbstr, uint predict_matrix_id, const Array& source_matrix_ids, const string& distfn)
-    : c(new conn_t(dbstr)), destroy_c(true),
-            // m(),
-            // source_matrix_(c, source_matrix_id, true),
-            predict_matrix_(c, predict_matrix_id, false),
+    : c(new conn_t(dbstr)), destroy_c(true), predict_matrix_(c, predict_matrix_id, false),
             distance_function(switch_distance_function(distfn))
     {
         for (Array::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
             uint id = from_ruby<uint>(*st);
+            cerr << "distance_matrix.h: Adding phenomatrix " << id << " to distance matrix" << endl;
             source_matrices.push_back( Phenomatrix(c, id, true) );
         }
     }

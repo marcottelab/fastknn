@@ -14,7 +14,6 @@ typedef unsigned int uint;
 #include <boost/unordered_map.hpp>
 #include <boost/lexical_cast.hpp>
 #include <string>
-#include <iostream>
 
 #include <set>
 
@@ -94,14 +93,23 @@ public:
         construct();
     }
 
+
     // Copy constructor
     Phenomatrix(const Phenomatrix& rhs)
-    : c(rhs.c), destroy_c(false), preload_(true), id_(rhs.id_), row_count_(rhs.row_count_),
-      column_ids_(rhs.column_ids_), max_row_count_(rhs.max_row_count_), root_id_(rhs.root_id_),
-      parent_id_(rhs.parent_id_), type_(rhs.type_)
+    : c(rhs.c),
+      destroy_c(false),
+      preload_(rhs.preload_),
+      id_(rhs.id_),
+      row_count_(rhs.row_count_),
+      column_ids_(rhs.column_ids_),
+      max_row_count_(rhs.max_row_count_),
+      root_id_(rhs.root_id_),
+      parent_id_(rhs.parent_id_),
+      type_(rhs.type_)
     {
+        cerr << "phenomatrix.h: Copy constructor called! id = " << id_ << endl;
         // Copy the matrix contents.
-        obs = new omatrix(rhs.obs->size());
+        obs = new omatrix(column_ids_.size());
         for (omatrix::const_iterator rt = obs->begin(); rt != obs->end(); ++rt)
             (*obs)[rt->first] = rt->second;
     }
