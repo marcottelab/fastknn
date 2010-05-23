@@ -168,6 +168,7 @@ public:
             cerr << "Requested non-existent column " << j << endl;
 
             // TEST CODE
+            cerr << "Matrix is " << id() << endl;
             for (omatrix::const_iterator k = obs->begin(); k != obs->end(); ++k)
                 cerr << k->first << ", " << std::flush;
             cerr << endl;
