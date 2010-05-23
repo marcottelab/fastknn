@@ -161,6 +161,14 @@ public:
         omatrix::const_iterator jt = obs->find(j);
         if (jt == obs->end()) {
             cerr << "Requested non-existent column " << j << endl;
+
+            // TEST CODE
+            for (omatrix::const_iterator k = obs->begin(); k != obs->end(); ++k)
+                cerr << k->first << ", " << flush;
+            cerr << endl;
+            // END TEST CODE
+
+
             throw;
         }
         return jt->second;
