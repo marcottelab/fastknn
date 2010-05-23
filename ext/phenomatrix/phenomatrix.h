@@ -164,7 +164,7 @@ public:
 
             // TEST CODE
             for (omatrix::const_iterator k = obs->begin(); k != obs->end(); ++k)
-                cerr << k->first << ", " << flush;
+                cerr << k->first << ", " << std::flush;
             cerr << endl;
             // END TEST CODE
 

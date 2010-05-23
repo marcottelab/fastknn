@@ -8,7 +8,7 @@ void Init_distance_matrix() {
 
     Data_Type<DistanceMatrix> rb_cDistanceMatrix =
             define_class<DistanceMatrix>("DistanceMatrix")
-            .define_constructor(Constructor<DistanceMatrix,const string&, uint, const Array&, const string&>())
+            .define_constructor(Constructor<DistanceMatrix,const string&, uint, Array, const string&>())
             .define_method("max_intersection_size", &DistanceMatrix::max_intersection_size)
             .define_method("max_intersection_count", &DistanceMatrix::max_intersection_size)
             .define_method("intersection_size", &DistanceMatrix::intersection_size)

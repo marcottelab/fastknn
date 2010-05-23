@@ -89,7 +89,7 @@ public:
         return 1.0;
     }
 
-    double distance_given_matrix(const uint& j1, const list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j2) const {
+    double distance_given_matrix(const uint& j1, list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j2) const {
         return (*distance_function)(
                     predict_matrix_.observations_size(j1),
                     source_matrix_iter->observations_size(j2),
@@ -99,7 +99,7 @@ public:
 
 
     // Find the single closest column in the source matrix to j in the predict matrix.
-    std::pair<uint,double> nearest(const list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j) const {
+    std::pair<uint,double> nearest_given_matrix(list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j) const {
         id_set s = source_matrix_iter->column_ids();
 
         double min_dist = 100;
@@ -107,7 +107,7 @@ public:
 
         for (id_set::const_iterator k = s.begin(); k != s.end(); ++k) {
             if (j == *k) continue; // Don't count it when the columns are the same
-            double d_jk = distance(j, *k);
+            double d_jk = distance_given_matrix(j, source_matrix_iter, *k);
             if (d_jk < min_dist) {
                 min_dist = d_jk;
                 min_dist_id = *k;
@@ -122,7 +122,7 @@ public:
         std::pair<uint,double> min;
 
         for (list<Phenomatrix>::const_iterator pt = source_matrices.begin(); pt != source_matrices.end(); ++pt) {
-            std::pair<uint,double> min_tmp = nearest(pt, j);
+            std::pair<uint,double> min_tmp = nearest_given_matrix(pt, j);
             if (min_tmp.second < min.second) min = min_tmp;
         }
 
@@ -145,7 +145,8 @@ public:
 
     // Count the number of items in common between j1 and j2
     size_t intersection_size(uint j1, uint j2) const {
-        return intersection(j1, j2).size();
+        list<Phenomatrix>::const_iterator f = find_source_matrix(j2);
+        return intersection_size_given_matrix(j1, f, j2);
     }
 
 
@@ -210,7 +211,7 @@ protected:
         return source_matrix_iter->tree_row_count();
     }
 
-    id_set intersection_given_matrix(uint j1, const list<Phenomatrix>::const_iterator source_matrix_iter, uint j2) const {
+    id_set intersection_given_matrix(const uint& j1, list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j2) const {
         id_set s1 = predict_matrix_.observations(j1);
         id_set s2 = source_matrix_iter->observations(j2);
 
