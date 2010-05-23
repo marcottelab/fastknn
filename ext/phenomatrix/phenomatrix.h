@@ -1,4 +1,4 @@
-
+typedef unsigned int uint;
 #ifdef RICE
 # include <rice/Object.hpp>
 # include <rice/Data_Type.hpp>
@@ -188,6 +188,10 @@ public:
     // Return the column identifiers
     id_set column_ids() const {
         return column_ids_;
+    }
+
+    bool has_column(uint j) const {
+        return (obs->find(j) != obs->end());
     }
     
 protected:

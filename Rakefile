@@ -2,6 +2,7 @@
 
 require 'rubygems'
 require 'rake/extensiontask'
+require 'rake/testtask'
 
 spec = Gem::Specification.new do |s|
   s.name = "Fastknn"
@@ -15,4 +16,10 @@ end
 
 Rake::ExtensionTask.new('phenomatrix')
 Rake::ExtensionTask.new('distance_matrix')
-Rake::ExtensionTask.new('classifier')
+
+Rake::TestTask.new(:test_all) do |t|
+  t.test_files = FileList['test/test*.rb']
+  t.warning = true
+  t.verbose = false
+end
+# Rake::ExtensionTask.new('classifier')
