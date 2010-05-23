@@ -171,6 +171,13 @@ public:
         return Rice::Object(); // nil
     }
 
+    Rice::Array source_matrix_ids() const {
+        Rice::Array ids;
+        for (list<Phenomatrix>::const_iterator st = source_matrices.begin(); st != source_matrices.end(); ++st)
+            ids.push(to_ruby<uint>(st->id()));
+        return ids;
+    }
+
 //    // These are the same as predict_parent_id and source_parent_id, but they
 //    // return Ruby nil instead of 0
 //    Rice::Object rb_predict_parent_id() {

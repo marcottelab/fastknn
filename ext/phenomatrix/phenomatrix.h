@@ -145,6 +145,11 @@ public:
     // than expected if this is a mask.
     size_t column_count() const { return obs->size(); }
 
+
+    uint id() const {
+        return id_;
+    }
+
     // Get the ID of the earliest ancestor of this matrix
     uint root_id() const {
         return root_id_;
