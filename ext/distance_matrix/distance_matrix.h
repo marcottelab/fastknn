@@ -150,9 +150,9 @@ public:
     // Get the items that are common between j1 in predict matrix and j2 in
     // source matrix
     id_set intersection(uint j1, uint j2) const {
-        cerr << "intersection(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
-        
         list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
+        cerr << "intersection(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
+
         if (f == source_matrices.end())
             return id_set(); // empty
         
@@ -161,11 +161,11 @@ public:
 
     // Count the number of items in common between j1 and j2 (j1 in predict matrix, j2 in a source matrix)
     size_t intersection_size(uint j1, uint j2) const {
+        list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
         cerr << "intersection_size(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
         
-        list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
         if (f == source_matrices.end())
-            return id_set(); // empty
+            return 0; // empty
 
         return intersection_size_given_matrix(j1, f, j2);
     }
@@ -240,7 +240,6 @@ protected:
     }
 
     id_set intersection_given_matrix(const uint& j1, list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j2) const {
-
         cerr << "distance_matrix.h: intersection_given_matrix(3): source matrix = " << source_matrix_iter->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
 
         id_set s1 = predict_matrix_.observations(j1);
