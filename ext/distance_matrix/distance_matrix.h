@@ -53,8 +53,7 @@ public:
             source_matrices.push_back( Phenomatrix(c, id, true) );
         }
     }
-#endif
-
+#else
     DistanceMatrix(conn_t* c_, uint predict_matrix_id, const id_set& source_matrix_ids, const string& distfn = "hypergeometric")
             : c(c_), destroy_c(false), predict_matrix_(c, predict_matrix_id, false),
             distance_function(switch_distance_function(distfn))
@@ -63,6 +62,7 @@ public:
             source_matrices.push_back( Phenomatrix(c, *st, true) );
         }
     }
+#endif
 
     ~DistanceMatrix() {
         if (destroy_c) delete c;
