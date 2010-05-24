@@ -41,28 +41,39 @@ double (*switch_distance_function(const std::string& distance_measure))(size_t,s
 class DistanceMatrix {
 public:
 #ifdef RICE
+    // This constructor is the one we use for the Ruby interface (RICE) since
+    // Ruby would likely have trouble with std::set. Instead, it takes an array.
     DistanceMatrix(const string& dbstr, uint predict_matrix_id, const Array& source_matrix_ids, const string& distfn)
-    : c(new conn_t(dbstr)), destroy_c(true), predict_matrix_(c, predict_matrix_id, false),
+    : c(new conn_t(dbstr)), destroy_c(true), predict_matrix_(c, predict_matrix_id),
             distance_function(switch_distance_function(distfn))
     {
         for (Array::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
             uint id = from_ruby<uint>(*st);
             cerr << "distance_matrix.h: Adding phenomatrix " << id << " to distance matrix" << endl;
-            source_matrices.push_back( Phenomatrix(c, id, true) );
-        }
-    }
-#else
-    DistanceMatrix(conn_t* c_, uint predict_matrix_id, const id_set& source_matrix_ids, const string& distfn = "hypergeometric")
-            : c(c_), destroy_c(false), predict_matrix_(c, predict_matrix_id, false),
-            distance_function(switch_distance_function(distfn))
-    {
-        for (id_set::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
-            source_matrices.push_back( Phenomatrix(c, *st, true) );
+            source_matrices.push_back( Phenomatrix(c, id) );
         }
     }
 #endif
 
+    // This constructor allows a connection to be shared among multiple objects by
+    // taking a pointer to an existing one. It is assumed that Ruby won't pass
+    // such a pointer, and so we use a set of uints instead of a Rice::Array (which
+    // is neccessary for the Ruby interface) as well.
+    //
+    // In other words, this constructor is exclusively for calling from within
+    // a C++ environment of some sort.
+    DistanceMatrix(conn_t* c_, uint predict_matrix_id, const id_set& source_matrix_ids, const string& distfn = "hypergeometric")
+            : c(c_), destroy_c(false), predict_matrix_(c, predict_matrix_id),
+            distance_function(switch_distance_function(distfn))
+    {
+        for (id_set::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
+            source_matrices.push_back( Phenomatrix(c, *st) );
+        }
+    }
+
+
     ~DistanceMatrix() {
+        // Do not delete shared connections!
         if (destroy_c) delete c;
     }
 
@@ -73,7 +84,9 @@ public:
     // Find source matrix by columns
     list<Phenomatrix>::const_iterator find_source_matrix_by_column(uint j) const {
         for (list<Phenomatrix>::const_iterator dt = source_matrices.begin(); dt != source_matrices.end(); ++dt) {
+#ifdef DEBUG_TRACE_INTERSECTION
             cerr << "distance_matrix.h: find_source_matrix_by_column: Checking matrix " << dt->id() << endl;
+#endif
             if (dt->has_column(j)) {
                 cerr << "\t...found on " << dt->id() << endl;
                 return dt;
@@ -151,8 +164,9 @@ public:
     // source matrix
     id_set intersection(uint j1, uint j2) const {
         list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
+#ifdef DEBUG_TRACE_INTERSECTION
         cerr << "intersection(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
-
+#endif
         if (f == source_matrices.end())
             return id_set(); // empty
         
@@ -162,7 +176,9 @@ public:
     // Count the number of items in common between j1 and j2 (j1 in predict matrix, j2 in a source matrix)
     size_t intersection_size(uint j1, uint j2) const {
         list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
+#ifdef DEBUG_TRACE_INTERSECTION
         cerr << "intersection_size(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
+#endif
         
         if (f == source_matrices.end())
             return 0; // empty
@@ -240,7 +256,9 @@ protected:
     }
 
     id_set intersection_given_matrix(const uint& j1, list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j2) const {
+#ifdef DEBUG_TRACE_INTERSECTION
         cerr << "distance_matrix.h: intersection_given_matrix(3): source matrix = " << source_matrix_iter->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
+#endif
 
         id_set s1 = predict_matrix_.observations(j1);
         id_set s2 = source_matrix_iter->observations(j2);
@@ -252,7 +270,9 @@ protected:
     }
 
     size_t intersection_size_given_matrix(const uint& j1, list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j2) const {
+#ifdef DEBUG_TRACE_INTERSECTION
         cerr << "distance_matrix.h: intersection_size_given_matrix(3): source matrix = " << source_matrix_iter->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
+#endif
         return intersection_given_matrix(j1, source_matrix_iter, j2).size();
     }
 

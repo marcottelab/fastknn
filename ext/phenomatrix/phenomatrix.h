@@ -81,14 +81,19 @@ size_t fetch_id(conn_t* c, const string& sql) {
 
 class Phenomatrix {
 public:
-    Phenomatrix(conn_t* c_, uint id, bool preload = true)
-    : c(c_), destroy_c(false), preload_(preload), id_(id), type_("Matrix"), obs(NULL)
+    // This constructor is typically called by DistanceMatrix, so different matrices
+    // can share the same database connection.
+    //
+    // At some point, it should be revised to accept a Ruby on Rails connection.
+    Phenomatrix(conn_t* c_, uint id)
+    : c(c_), destroy_c(false), id_(id), type_("Matrix"), obs(NULL)
     {
         construct();
     }
-    
-    Phenomatrix(const string& dbstr, uint id, bool preload = false)
-    : c(new conn_t(dbstr)), destroy_c(true), preload_(preload), id_(id), type_("Matrix"), obs(NULL)
+
+    // This is the constructor used by Rice and the Ruby interface.
+    Phenomatrix(const string& dbstr, uint id)
+    : c(new conn_t(dbstr)), destroy_c(true), id_(id), type_("Matrix"), obs(NULL)
     {
         construct();
     }
@@ -98,7 +103,6 @@ public:
     Phenomatrix(const Phenomatrix& rhs)
     : c(rhs.c),
       destroy_c(false),
-      preload_(rhs.preload_),
       id_(rhs.id_),
       row_count_(rhs.row_count_),
       column_ids_(rhs.column_ids_),
@@ -108,7 +112,9 @@ public:
       type_(rhs.type_),
       obs(new omatrix(*(rhs.obs)))
     {
+#ifdef DEBUG_TRACE_COPY
         cerr << "phenomatrix.h: Copy constructor called! id = " << id_ << endl;
+#endif
     }
 
     ~Phenomatrix() {
@@ -128,19 +134,10 @@ public:
 #endif
 
     // Get the number of unique rows in the matrix. Naive to node/tree/leaf status.
-    size_t naive_row_count() const {
-        if (preload_) return row_count_;
-        else return fetch_row_count();
-    }
+    size_t naive_row_count() const { return row_count_; }
 
     // Get the number of rows in the matrix tree.
-    size_t tree_row_count() const {
-        if (preload_) return max_row_count_;
-        else {
-            cerr << "Warning: You should really be preloading this phenomatrix." << endl;
-            return fetch_row_count(fetch_parent_and_root_id().second);
-        }
-    }
+    size_t tree_row_count() const { return max_row_count_; }
 
     // Returns the number of columns in this matrix tree, which may not be the
     // same as the number of columns in the obs matrix (but should).
@@ -151,33 +148,28 @@ public:
     size_t column_count() const { return obs->size(); }
 
 
-    uint id() const {
-        return id_;
-    }
+    uint id() const { return id_; }
 
     // Get the ID of the earliest ancestor of this matrix
-    uint root_id() const {
-        return root_id_;
-    }
+    uint root_id() const { return root_id_; }
 
 
-    uint parent_id() const {
-        if (preload_)     return parent_id_;
-        else             return parent_id(id_);
-    }
+    uint parent_id() const { return parent_id_; }
 
     // Get column
     id_set observations(uint j) const {
         omatrix::const_iterator jt = obs->find(j);
         if (jt == obs->end()) {
-            cerr << "Requested non-existent column " << j << endl;
+            cerr << "phenomatrix.h: observations(1): Requested non-existent column " << j << " on matrix " << id_ << endl;
 
+#ifdef DEBUG_TRACE_DISTANCE
             // TEST CODE
             cerr << "Matrix is " << id() << endl;
             for (omatrix::const_iterator k = obs->begin(); k != obs->end(); ++k)
                 cerr << k->first << ", " << std::flush;
             cerr << endl;
             // END TEST CODE
+#endif
 
 
             throw;
@@ -186,31 +178,23 @@ public:
     }
 
     // Get column size
-    size_t observations_size(uint j) const {
-        return observations(j).size();
-    }
+    size_t observations_size(uint j) const { return observations(j).size(); }
 
-    string type() const {
-        return type_;
-    }
+    string type() const { return type_; }
 
     // Determine whether there's an observation at gene i, phene j
     bool operator()(uint i, uint j) const {
         omatrix::const_iterator jt = obs->find(j);
-        if (jt == obs->end())
-            return false;
-        else {
-            return (jt->second.find(i) != jt->second.end());
-        }
+        return (jt == obs->end()) ? false : (jt->second.find(i) != jt->second.end());
     }
 
     // Return the column identifiers
-    id_set column_ids() const {
-        return column_ids_;
-    }
+    id_set column_ids() const { return column_ids_; }
 
     bool has_column(uint j) const {
+#ifdef DEBUG_TRACE_DISTANCE
 	cerr << "phenomatrix.h: has_column: on matrix " << id_ << ", requested col " << j << " and result will be " << (obs->find(j) != obs->end()) << endl;
+#endif
         return (obs->find(j) != obs->end());
     }
     
@@ -218,12 +202,16 @@ protected:
     // Surrogate constructor, called by both default constructors, but not the
     // copy constructor.
     void construct() {
-        set_parent_and_root_id();
+        // Get the information about the immediate parent and the root of the tree of matrices.
+        std::pair<uint,uint> parent_and_root = fetch_parent_and_root_id();
+        parent_id_ = parent_and_root.first;
+        root_id_   = parent_and_root.second;
 
-        if (preload_) preload_attributes();
+        // Get matrix attributes
+        row_count_ = fetch_row_count();
+        max_row_count_ = fetch_max_row_count();
 
         // Create the observation matrix
-        // column_count_ = fetch_column_count();
         column_ids_ = fetch_column_ids();
         obs = new omatrix(column_ids_.size());
 
@@ -237,14 +225,6 @@ protected:
 
     void remove_observation(uint i, uint j) {
         (*obs)[j].erase(i);
-    }
-
-
-    void preload_attributes() {
-        // These need to be done in this order.
-        row_count_ = fetch_row_count();
-        max_row_count_ = fetch_max_row_count();
-        preload_ = true; // Don't want to do this again, so flag it.
     }
 
 
@@ -338,14 +318,6 @@ protected:
             return fetch_count(c, "SELECT COUNT(DISTINCT i) FROM entries WHERE matrix_id = " + lexical_cast<string>(rid) + ";");
     }
 
-    // Get the ID of the earliest ancestor of this matrix, and in the process get
-    // the parent_id
-    void set_parent_and_root_id() {
-        std::pair<uint,uint> parent_and_root = fetch_parent_and_root_id();
-        parent_id_ = parent_and_root.first;
-        root_id_   = parent_and_root.second;
-    }
-
     std::pair<uint,uint> fetch_parent_and_root_id() const {
         uint par;
         uint x = par = parent_id(id_);
@@ -366,7 +338,6 @@ protected:
 
     conn_t* c;
     bool destroy_c; // false by default (if c is passed in), true otherwise.
-    bool preload_;
     uint id_;
 
     size_t row_count_;

@@ -7,7 +7,7 @@ extern "C"
 void Init_phenomatrix() {
     Data_Type<Phenomatrix> rb_cPhenomatrix =
             define_class<Phenomatrix>("Phenomatrix")
-            .define_constructor(Constructor<Phenomatrix,const std::string&, uint, bool>())
+            .define_constructor(Constructor<Phenomatrix,const std::string&, uint>())
             .define_method("parent_id", &Phenomatrix::rb_parent_id)
             .define_method("root_id", &Phenomatrix::rb_root_id)
             .define_method("id", &Phenomatrix::id)
