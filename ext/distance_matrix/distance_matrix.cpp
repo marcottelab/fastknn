@@ -8,7 +8,7 @@ void Init_distance_matrix() {
 
     Data_Type<DistanceMatrix> rb_cDistanceMatrix =
             define_class<DistanceMatrix>("DistanceMatrix")
-            .define_constructor(Constructor<DistanceMatrix,const string&, uint, Array, const string&>())
+            .define_constructor(Constructor<DistanceMatrix,const string&, uint, Array, const string&, const string&>())
             .define_method("source_matrix_ids", &DistanceMatrix::source_matrix_ids)
             .define_method("max_intersection_size", &DistanceMatrix::max_intersection_size)
             .define_method("max_intersection_count", &DistanceMatrix::max_intersection_size)
@@ -17,7 +17,9 @@ void Init_distance_matrix() {
             .define_method("nearest_id", &DistanceMatrix::rb_nearest_id)
             .define_method("nearest_distance", &DistanceMatrix::rb_nearest_distance)
             .define_method("nearest", &DistanceMatrix::rb_nearest)
-            .define_method("distance", &DistanceMatrix::rb_distance);
+            .define_method("distance", &DistanceMatrix::rb_distance)
+            .define_method("knearest", &DistanceMatrix::rb_knearest)
+            .define_method("predict", &DistanceMatrix::predict);
 }
 
 #endif

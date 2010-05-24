@@ -11,14 +11,23 @@ using Rice::Object;
 #include <map>
 #include <set>
 #include <algorithm>
+#include <queue>
 using std::set;
 using std::list;
+using std::priority_queue;
 using std::set_intersection;
 
 #include "hypergeometric.h"
 #include "euclidean.h"
 #include "../phenomatrix/phenomatrix.h"
+#include "type_shield.h"
 // typedef boost::numeric::ublas::mapped_matrix<double> dmatrix_t;
+
+typedef std::pair<uint,double>       id_dist_pair;
+typedef std::list<Phenomatrix>       matrix_list;
+typedef std::list<id_dist_pair>      proximity_list;
+typedef type_shield<double,uint>     dist_id;
+typedef std::priority_queue<dist_id> proximity_queue;
 
 size_t tree_matrix_row_count(conn_t& c, uint id) {
     work_t w(c);
@@ -54,9 +63,10 @@ public:
 #ifdef RICE
     // This constructor is the one we use for the Ruby interface (RICE) since
     // Ruby would likely have trouble with std::set. Instead, it takes an array.
-    DistanceMatrix(const string& dbstr, uint predict_matrix_id, const Array& source_matrix_ids, const string& distfn)
+    DistanceMatrix(const string& dbstr, uint predict_matrix_id, const Array& source_matrix_ids, const string& distfn, const string& classifier)
     : c(new conn_t(dbstr)), destroy_c(true), predict_matrix_(c, predict_matrix_id),
-            distance_function(switch_distance_function(distfn))
+            distance_function(switch_distance_function(distfn)),
+            classifier_function(switch_classifier_function(classifier))
     {
         for (Array::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
             uint id = from_ruby<uint>(*st);
@@ -75,9 +85,10 @@ public:
     //
     // In other words, this constructor is exclusively for calling from within
     // a C++ environment of some sort.
-    DistanceMatrix(conn_t* c_, uint predict_matrix_id, const id_set& source_matrix_ids, const string& distfn = "hypergeometric")
+    DistanceMatrix(conn_t* c_, uint predict_matrix_id, const id_set& source_matrix_ids, const string& distfn, const string& classifier)
             : c(c_), destroy_c(false), predict_matrix_(c, predict_matrix_id),
-            distance_function(switch_distance_function(distfn))
+            distance_function(switch_distance_function(distfn)),
+            classifier_function(switch_classifier_function(classifier))
     {
         for (id_set::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
             source_matrices.push_back( Phenomatrix(c, *st) );
@@ -95,8 +106,8 @@ public:
     //}
 
     // Find source matrix by columns
-    list<Phenomatrix>::const_iterator find_source_matrix_by_column(uint j) const {
-        for (list<Phenomatrix>::const_iterator dt = source_matrices.begin(); dt != source_matrices.end(); ++dt) {
+    matrix_list::const_iterator find_source_matrix_by_column(uint j) const {
+        for (matrix_list::const_iterator dt = source_matrices.begin(); dt != source_matrices.end(); ++dt) {
 #ifdef DEBUG_TRACE_INTERSECTION
             cerr << "distance_matrix.h: find_source_matrix_by_column: Checking matrix " << dt->id() << endl;
 #endif
@@ -112,60 +123,44 @@ public:
     }
 
     // Find source matrix by columns
-    list<Phenomatrix>::const_iterator find_source_matrix_by_id(uint id) const {
-        for (list<Phenomatrix>::const_iterator dt = source_matrices.begin(); dt != source_matrices.end(); ++dt)
+    matrix_list::const_iterator find_source_matrix_by_id(uint id) const {
+        for (matrix_list::const_iterator dt = source_matrices.begin(); dt != source_matrices.end(); ++dt)
             if (dt->id() == id) return dt;
         cerr << "distance_matrix.h: Warning: source matrix with id " << id << " was not found." << endl;
         return source_matrices.end(); // not found
     }
 
+
+    // Given a row i and a column j, calculate a score (using the classifier function)
+    // for the gene's likelihood of being involved in the phenotype.
+    float predict(uint i, uint j) const {
+        return 0.0; // FIXME
+    }
+
+
     // Return the distance, according to our distance function, between the two
     // columns.
     double distance(uint j1, uint j2) const {
-        list<Phenomatrix>::const_iterator j2source = find_source_matrix_by_column(j2);
+        matrix_list::const_iterator j2source = find_source_matrix_by_column(j2);
         if (j2source != source_matrices.end())
             return distance_given_matrix(j1, j2source, j2);
         return 1.0;
     }
 
-    double distance_given_matrix(const uint& j1, list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j2) const {
-        return (*distance_function)(
-                    predict_matrix_.observations_size(j1),
-                    source_matrix_iter->observations_size(j2),
-                    intersection_size_given_matrix(j1,source_matrix_iter, j2),
-                    max_intersection_size_given_matrix(source_matrix_iter));
-    }
 
-
-    // Find the single closest column in the source matrix to j in the predict matrix.
-    std::pair<uint,double> nearest_given_matrix(list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j) const {
-        id_set s = source_matrix_iter->column_ids();
-
-        double min_dist = 100;
-        uint min_dist_id = 0;
-
-        for (id_set::const_iterator k = s.begin(); k != s.end(); ++k) {
-            if (j == *k) continue; // Don't count it when the columns are the same
-            double d_jk = distance_given_matrix(j, source_matrix_iter, *k);
-            if (d_jk < min_dist) {
-                min_dist = d_jk;
-                min_dist_id = *k;
-            }
-        }
-        
-        return std::make_pair<uint,double>(min_dist_id, min_dist);
-    }
-
-
-    std::pair<uint,double> nearest(uint j) const {
+    // Note that this function returns only the SINGLE NEAREST -- as in, the first
+    // found!
+    //
+    // If you want multiple nearest, use a different function.
+    id_dist_pair nearest(uint j) const {
         // Do a priming read to save an assignment -- particularly since we're
         // likely to have only one source matrix.
-        list<Phenomatrix>::const_iterator pt = source_matrices.begin();
-        std::pair<uint,double> min = nearest_given_matrix(pt, j);
+        matrix_list::const_iterator pt = source_matrices.begin();
+        id_dist_pair min = nearest_given_matrix(pt, j);
         ++pt;
 
         for (; pt != source_matrices.end(); ++pt) {
-            std::pair<uint,double> min_tmp = nearest_given_matrix(pt, j);
+            id_dist_pair min_tmp = nearest_given_matrix(pt, j);
             if (min_tmp.second < min.second)
                 min = min_tmp;
         }
@@ -183,7 +178,7 @@ public:
     // Get the items that are common between j1 in predict matrix and j2 in
     // source matrix
     id_set intersection(uint j1, uint j2) const {
-        list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
+        matrix_list::const_iterator f = find_source_matrix_by_column(j2);
 #ifdef DEBUG_TRACE_INTERSECTION
         cerr << "intersection(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
 #endif
@@ -195,7 +190,7 @@ public:
 
     // Count the number of items in common between j1 and j2 (j1 in predict matrix, j2 in a source matrix)
     size_t intersection_size(uint j1, uint j2) const {
-        list<Phenomatrix>::const_iterator f = find_source_matrix_by_column(j2);
+        matrix_list::const_iterator f = find_source_matrix_by_column(j2);
 #ifdef DEBUG_TRACE_INTERSECTION
         cerr << "intersection_size(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
 #endif
@@ -208,22 +203,33 @@ public:
 
 
 #ifdef RICE
+    Rice::Hash rb_knearest(const uint& j, size_t k = 1) const {
+        proximity_queue q = knearest(j, k);
+        Rice::Hash ret;
+        while (q.size() > 0) {
+            dist_id di = q.pop();
+            ret[ to_ruby<uint>(di.second()) ]   =   di.first();
+        }
+
+        return ret;
+    }
+    
     // Returns an id or nil
     Rice::Object rb_nearest_id(uint j) const {
-        std::pair<uint,double> n = nearest(j);
+        id_dist_pair n = nearest(j);
         if (n.first == 0) return Rice::Object();
         return Rice::Object( to_ruby<uint>(n.first) );
     }
     // Returns a double or nil
     Rice::Object rb_nearest_distance(uint j) const {
-        std::pair<uint,double> n = nearest(j);
+        id_dist_pair n = nearest(j);
         if (n.first == 0) return Rice::Object();
         return Rice::Object( to_ruby<double>(n.second) );
     }
 
     // Returns both the id and the distance, or nil
     Rice::Object rb_nearest(uint j) const {
-        std::pair<uint,double> n = nearest(j);
+        id_dist_pair n = nearest(j);
         if (n.first == 0) return Rice::Object(); // nil
         return pair_to_array<>(n);
     }
@@ -231,7 +237,7 @@ public:
     // Return the distance, according to our distance function, between the two
     // columns.
     Rice::Object rb_distance(uint j1, uint j2) const {
-        list<Phenomatrix>::const_iterator j2source = find_source_matrix_by_column(j2);
+        matrix_list::const_iterator j2source = find_source_matrix_by_column(j2);
         if (j2source != source_matrices.end())
             return to_ruby<double>((*distance_function)(
                                         predict_matrix_.observations_size(j1),
@@ -243,7 +249,7 @@ public:
 
     Rice::Array source_matrix_ids() const {
         Rice::Array ids;
-        for (list<Phenomatrix>::const_iterator st = source_matrices.begin(); st != source_matrices.end(); ++st)
+        for (matrix_list::const_iterator st = source_matrices.begin(); st != source_matrices.end(); ++st)
             ids.push(to_ruby<uint>(st->id()));
         return ids;
     }
@@ -275,7 +281,7 @@ public:
     size_t max_intersection_size() const {
         size_t max_size = 0;
         
-        for (list<Phenomatrix>::const_iterator pt = source_matrices.begin(); pt != source_matrices.end(); ++pt) {
+        for (matrix_list::const_iterator pt = source_matrices.begin(); pt != source_matrices.end(); ++pt) {
             size_t tmp = max_intersection_size_given_matrix(pt);
             if (tmp > max_size)
                 max_size = tmp;
@@ -284,11 +290,93 @@ public:
     }
     
 protected:
-    size_t max_intersection_size_given_matrix(list<Phenomatrix>::const_iterator source_matrix_iter) const {
+    double distance_given_matrix(const uint& j1, matrix_list::const_iterator source_matrix_iter, const uint& j2) const {
+        return (*distance_function)(
+                    predict_matrix_.observations_size(j1),
+                    source_matrix_iter->observations_size(j2),
+                    intersection_size_given_matrix(j1,source_matrix_iter, j2),
+                    max_intersection_size_given_matrix(source_matrix_iter));
+    }
+
+
+    // Find the single closest column in the source matrix to j in the predict matrix.
+    id_dist_pair nearest_given_matrix(matrix_list::const_iterator source_matrix_iter, const uint& j) const {
+        id_set s = source_matrix_iter->column_ids();
+
+        double min_dist = 100;
+        uint min_dist_id = 0;
+
+        for (id_set::const_iterator k = s.begin(); k != s.end(); ++k) {
+            if (j == *k) continue; // Don't count it when the columns are the same
+            double d_jk = distance_given_matrix(j, source_matrix_iter, *k);
+            if (d_jk < min_dist) {
+                min_dist = d_jk;
+                min_dist_id = *k;
+            }
+        }
+
+        return std::make_pair<uint,double>(min_dist_id, min_dist);
+    }
+
+
+    // Find the k items closest to j
+    proximity_queue knearest(const uint& j, size_t k = 1, double kth_so_far = 100.0) const {
+        proximity_queue q;
+        
+        for (matrix_list::const_iterator source_matrix_iter = source_matrices.begin(); st != source_matrices.end(); ++source_matrix_iter) {
+            // Add items on to the queue (q) that are within k (or kth_so_far)
+            knearest_given_matrix(q, source_matrix_iter, j, k, kth_so_far);
+        }
+
+        // This is the actual return-queue:
+        proximity_queue ret;
+
+        // Find the first k items
+        while (k > 0) {
+            kth_so_far = q.top().first();
+            ret.push(q.pop());
+            k--;
+        }
+
+        // Now include further items equal to kth_so_far
+        while (q.top() == kth_so_far) ret.push(q.pop());
+
+        return ret;
+    }
+
+
+    // Find the k closest columns, and those of equivalent distance, to j
+    // In other words, if we get to the kth closest and there's another column
+    // with the same distance, we include both.
+    void knearest_given_matrix(proximity_queue& q, matrix_list::const_iterator source_matrix_iter, const uint& j, const size_t& k, double& kth_so_far = 100.0) {
+        id_set s = source_matrix_iter->column_ids();
+
+        uint current_k = 0;
+
+        // Only sort all on the first matrix. After that, can limit to those within
+        // kth_so_far.
+        for (id_set::const_iterator st = s.begin(); st != s.end(); ++st) {
+            if (j == *st) continue; // Don't count it when the columns are the same
+            double d_jk = distance_given_matrix(j, source_matrix_iter, *st);
+
+            if (d_jk <= kth_so_far) { // don't add distances that are already outside the range
+                q.push(dist_id(d_jk, *st));
+
+                // We can set a boundary within k elements, and not accept anymore
+                // outside of it.
+                ++current_k;
+                if (current_k == k) kth_so_far = d_jk;
+            }
+        }
+    }
+
+
+
+    size_t max_intersection_size_given_matrix(matrix_list::const_iterator source_matrix_iter) const {
         return source_matrix_iter->tree_row_count();
     }
 
-    id_set intersection_given_matrix(const uint& j1, list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j2) const {
+    id_set intersection_given_matrix(const uint& j1, matrix_list::const_iterator source_matrix_iter, const uint& j2) const {
 #ifdef DEBUG_TRACE_INTERSECTION
         cerr << "distance_matrix.h: intersection_given_matrix(3): source matrix = " << source_matrix_iter->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
 #endif
@@ -302,7 +390,7 @@ protected:
         return ret;
     }
 
-    size_t intersection_size_given_matrix(const uint& j1, list<Phenomatrix>::const_iterator source_matrix_iter, const uint& j2) const {
+    size_t intersection_size_given_matrix(const uint& j1, matrix_list::const_iterator source_matrix_iter, const uint& j2) const {
 #ifdef DEBUG_TRACE_INTERSECTION
         cerr << "distance_matrix.h: intersection_size_given_matrix(3): source matrix = " << source_matrix_iter->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
 #endif
@@ -317,7 +405,7 @@ protected:
     // Database-contents-related stuff
     // These are protected because we don't want anyone accessing the connection
     // after this class has been destroyed. They'll have to create new ones.
-    list<Phenomatrix> source_matrices;
+    matrix_list source_matrices;
     Phenomatrix predict_matrix_;
 
     // Allow different distance functions to be subbed in.
