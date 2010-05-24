@@ -3,6 +3,7 @@
 #ifdef RICE
 #include <rice/Object.hpp>
 #include <rice/Array.hpp>
+#include <rice/Hash.hpp>
 using Rice::Array;
 using Rice::Object;
 #endif
@@ -21,6 +22,7 @@ using std::set_intersection;
 #include "euclidean.h"
 #include "../phenomatrix/phenomatrix.h"
 #include "type_shield.h"
+#include "naivebayes.h"
 // typedef boost::numeric::ublas::mapped_matrix<double> dmatrix_t;
 
 typedef std::pair<uint,double>       id_dist_pair;
@@ -32,6 +34,16 @@ typedef std::priority_queue<dist_id> proximity_queue;
 size_t tree_matrix_row_count(conn_t& c, uint id) {
     work_t w(c);
     return 0;
+}
+
+
+// Arguments for classifier:
+// - k for knn
+float (*switch_classifier_function(const std::string& classifier))(size_t) {
+    std::map<std::string, float(*)(size_t)> choices;
+    choices["naivebayes"]     = &naivebayes;
+
+    return choices[classifier];
 }
 
 
@@ -207,8 +219,9 @@ public:
         proximity_queue q = knearest(j, k);
         Rice::Hash ret;
         while (q.size() > 0) {
-            dist_id di = q.pop();
+            dist_id di = q.top();
             ret[ to_ruby<uint>(di.second()) ]   =   di.first();
+            q.pop();
         }
 
         return ret;
@@ -323,7 +336,7 @@ protected:
     proximity_queue knearest(const uint& j, size_t k = 1, double kth_so_far = 100.0) const {
         proximity_queue q;
         
-        for (matrix_list::const_iterator source_matrix_iter = source_matrices.begin(); st != source_matrices.end(); ++source_matrix_iter) {
+        for (matrix_list::const_iterator source_matrix_iter = source_matrices.begin(); source_matrix_iter != source_matrices.end(); ++source_matrix_iter) {
             // Add items on to the queue (q) that are within k (or kth_so_far)
             knearest_given_matrix(q, source_matrix_iter, j, k, kth_so_far);
         }
@@ -334,12 +347,13 @@ protected:
         // Find the first k items
         while (k > 0) {
             kth_so_far = q.top().first();
-            ret.push(q.pop());
+            ret.push(q.top());
+            q.pop();
             k--;
         }
 
         // Now include further items equal to kth_so_far
-        while (q.top() == kth_so_far) ret.push(q.pop());
+        while (q.top() == kth_so_far) { ret.push(q.top()); q.pop(); }
 
         return ret;
     }
@@ -348,7 +362,7 @@ protected:
     // Find the k closest columns, and those of equivalent distance, to j
     // In other words, if we get to the kth closest and there's another column
     // with the same distance, we include both.
-    void knearest_given_matrix(proximity_queue& q, matrix_list::const_iterator source_matrix_iter, const uint& j, const size_t& k, double& kth_so_far = 100.0) {
+    void knearest_given_matrix(proximity_queue& q, matrix_list::const_iterator source_matrix_iter, const uint& j, const size_t& k, double& kth_so_far) const {
         id_set s = source_matrix_iter->column_ids();
 
         uint current_k = 0;
@@ -410,4 +424,7 @@ protected:
 
     // Allow different distance functions to be subbed in.
     double (*distance_function)(size_t, size_t, size_t, size_t);
+
+    // Allow different classifiers to be subbed in
+    float (*classifier_function)(size_t);
 };

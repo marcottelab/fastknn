@@ -25,7 +25,7 @@ void Init_distance_matrix() {
 #endif
 
 int main() {
-    DistanceMatrix d("dbname=crossval_development user=jwoods password=youwish1", 185, 193, "hypergeometric");
+    DistanceMatrix d("dbname=crossval_development user=jwoods password=youwish1", 185, 193, "hypergeometric", "naivebayes");
     cout << "Max common items: " << d.max_intersection_size() << endl;
     return 0;
 }

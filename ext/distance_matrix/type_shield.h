@@ -22,7 +22,7 @@ public:
     type_shield(const T& t, const S& s) : val(t), shield(s) { }
     type_shield(const type_shield<T,S>& orig) : val(orig.val), shield(orig.shield) { }
     virtual ~type_shield() { }
-    type_shield<T,S>& operator=(const type_shield<T,S>& orig) { val = orig.val; shield = orig.shield; }
+    type_shield<T,S>& operator=(const type_shield<T,S>& orig) { val = orig.val; shield = orig.shield; return *this; }
     
 
     // Comparison operators -- only compare val, not shield!
