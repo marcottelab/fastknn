@@ -14,8 +14,9 @@ void Init_distance_matrix() {
             .define_method("max_intersection_count", &DistanceMatrix::max_intersection_size)
             .define_method("intersection_size", &DistanceMatrix::intersection_size)
             .define_method("intersection_count", &DistanceMatrix::intersection_size)
-            .define_method("nearest", &DistanceMatrix::rb_nearest)
+            .define_method("nearest_id", &DistanceMatrix::rb_nearest_id)
             .define_method("nearest_distance", &DistanceMatrix::rb_nearest_distance)
+            .define_method("nearest", &DistanceMatrix::rb_nearest)
             .define_method("distance", &DistanceMatrix::rb_distance);
 }
 

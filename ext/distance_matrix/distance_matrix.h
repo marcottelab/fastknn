@@ -38,6 +38,17 @@ double (*switch_distance_function(const std::string& distance_measure))(size_t,s
 }
 
 
+#ifdef RICE
+template <typename T, typename U>
+Rice::Array pair_to_array(const std::pair<T,U>& vals) {
+    Rice::Array a;
+    a.push( to_ruby<T>(vals.first) );
+    a.push( to_ruby<U>(vals.second) );
+    return a;
+}
+#endif
+
+
 class DistanceMatrix {
 public:
 #ifdef RICE
@@ -147,11 +158,16 @@ public:
 
 
     std::pair<uint,double> nearest(uint j) const {
-        std::pair<uint,double> min;
+        // Do a priming read to save an assignment -- particularly since we're
+        // likely to have only one source matrix.
+        list<Phenomatrix>::const_iterator pt = source_matrices.begin();
+        std::pair<uint,double> min = nearest_given_matrix(pt, j);
+        ++pt;
 
-        for (list<Phenomatrix>::const_iterator pt = source_matrices.begin(); pt != source_matrices.end(); ++pt) {
+        for (; pt != source_matrices.end(); ++pt) {
             std::pair<uint,double> min_tmp = nearest_given_matrix(pt, j);
-            if (min_tmp.second < min.second) min = min_tmp;
+            if (min_tmp.second < min.second)
+                min = min_tmp;
         }
 
         return min;
@@ -192,11 +208,24 @@ public:
 
 
 #ifdef RICE
-    uint rb_nearest(uint j) const {
-        return nearest(j).first;
+    // Returns an id or nil
+    Rice::Object rb_nearest_id(uint j) const {
+        std::pair<uint,double> n = nearest(j);
+        if (n.first == 0) return Rice::Object();
+        return Rice::Object( to_ruby<uint>(n.first) );
     }
-    double rb_nearest_distance(uint j) const {
-        return nearest(j).second;
+    // Returns a double or nil
+    Rice::Object rb_nearest_distance(uint j) const {
+        std::pair<uint,double> n = nearest(j);
+        if (n.first == 0) return Rice::Object();
+        return Rice::Object( to_ruby<double>(n.second) );
+    }
+
+    // Returns both the id and the distance, or nil
+    Rice::Object rb_nearest(uint j) const {
+        std::pair<uint,double> n = nearest(j);
+        if (n.first == 0) return Rice::Object(); // nil
+        return pair_to_array<>(n);
     }
 
     // Return the distance, according to our distance function, between the two
