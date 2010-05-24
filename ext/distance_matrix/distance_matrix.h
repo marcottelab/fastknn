@@ -49,7 +49,9 @@ public:
     {
         for (Array::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
             uint id = from_ruby<uint>(*st);
+#ifdef DEBUG_TRACE
             cerr << "distance_matrix.h: Adding phenomatrix " << id << " to distance matrix" << endl;
+#endif
             source_matrices.push_back( Phenomatrix(c, id) );
         }
     }
@@ -88,7 +90,9 @@ public:
             cerr << "distance_matrix.h: find_source_matrix_by_column: Checking matrix " << dt->id() << endl;
 #endif
             if (dt->has_column(j)) {
+#ifdef DEBUG_TRACE_INTERSECTION
                 cerr << "\t...found on " << dt->id() << endl;
+#endif
                 return dt;
             }
         }
