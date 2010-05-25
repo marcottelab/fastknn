@@ -1,82 +1,25 @@
+#ifndef PHENOMATRIX_H_
+# define PHENOMATRIX_H_
+
 typedef unsigned int uint;
 #ifdef RICE
 # include <rice/Object.hpp>
 # include <rice/Data_Type.hpp>
 # include <rice/Constructor.hpp>
 #endif
+
 #include <iostream>
 //#include <boost/numeric/ublas/matrix_sparse.hpp>
 
-#include <pqxx/connection.hxx>
-#include <pqxx/transaction.hxx>
-#include <pqxx/result.hxx>
+#include "connection.h"
+
 
 #include <boost/unordered_map.hpp>
-#include <boost/lexical_cast.hpp>
-#include <string>
 
-#include <set>
-
-using boost::lexical_cast;
-using std::string;
 using std::cerr;
 using std::cout;
 using std::endl;
-typedef pqxx::result result_t;
-typedef pqxx::connection conn_t;
-typedef pqxx::work work_t;
-typedef std::set<unsigned int> id_set;
 typedef boost::unordered_map<uint, std::set<uint> > omatrix;
-
-
-// Fetches an unsigned integer type (like a count) which will never be nil.
-uint fetch_count(conn_t* c, const string& sql) {
-    work_t w(*c);
-    result_t r = w.exec(sql);
-
-    uint ret;
-    r[0][0].to(ret);
-    return ret;
-}
-
-string fetch_type(conn_t* c, const string& table, uint id) {
-    work_t w(*c);
-    result_t r = w.exec("SELECT type FROM " + table + " WHERE id = " + lexical_cast<string>(id) + ";");
-
-    return string(r[0][0].c_str());
-}
-
-// Note: Make sure to include ORDER BY whatever the ID column is. Let SQL do the
-// sorting.
-id_set fetch_id_set(conn_t* c, const string& sql) {
-    work_t w(*c);
-    result_t r = w.exec(sql);
-    
-    id_set ret;
-    id_set::iterator hint = ret.end();
-    
-    for (result_t::const_iterator rt = r.begin(); rt != r.end(); ++rt) {
-        uint id = 0;
-        (*rt)[0].to(id);
-        if (id != 0) hint = ret.insert(hint, id);
-    }
-
-    return ret;
-}
-
-// Just like fetch_count, but checks for nil
-size_t fetch_id(conn_t* c, const string& sql) {
-    work_t w(*c);
-    result_t r = w.exec(sql);
-
-    if (r[0][0].is_null())
-        return 0; // 0 indicates NULL since no ID will ever be 0
-    else {
-        uint ret;
-        r[0][0].to(ret);
-        return ret;
-    }
-}
 
 
 class Phenomatrix {
@@ -104,6 +47,7 @@ public:
     : c(rhs.c),
       destroy_c(false),
       id_(rhs.id_),
+      row_ids_(rhs.row_ids_),
       row_count_(rhs.row_count_),
       column_ids_(rhs.column_ids_),
       max_row_count_(rhs.max_row_count_),
@@ -190,6 +134,8 @@ public:
 
     // Return the column identifiers
     id_set column_ids() const { return column_ids_; }
+    // Return the row identifiers
+    id_set row_ids() const { return row_ids_; }
 
     bool has_column(uint j) const {
 #ifdef DEBUG_TRACE_DISTANCE
@@ -197,6 +143,14 @@ public:
 #endif
         return (obs->find(j) != obs->end());
     }
+
+    bool has_row(uint i) const {
+        return (row_ids_.find(i) != row_ids_.end());
+    }
+
+    //bool has_observation(uint i, uint j) const {
+    //    return ((*obs)[j].find(i));
+    //}
     
 protected:
     // Surrogate constructor, called by both default constructors, but not the
@@ -208,11 +162,12 @@ protected:
         root_id_   = parent_and_root.second;
 
         // Get matrix attributes
+        row_ids_ = fetch_row_ids();
         row_count_ = fetch_row_count();
         max_row_count_ = fetch_max_row_count();
+        column_ids_ = fetch_column_ids();
 
         // Create the observation matrix
-        column_ids_ = fetch_column_ids();
         obs = new omatrix(column_ids_.size());
 
         load_matrix();
@@ -284,6 +239,11 @@ protected:
     }
 
 
+    id_set fetch_row_ids(uint of_id) const {
+        return fetch_id_set(c, "SELECT DISTINCT i FROM entries WHERE matrix_id = " + lexical_cast<string>(of_id) + " ORDER BY i;");
+    }
+    id_set fetch_row_ids() const { return fetch_row_ids(id_); }
+
     // Determine the number of unique rows in the matrix. Naive to node/tree/leaf status.
     size_t fetch_row_count(uint of_id) const {
         return fetch_count(c, "SELECT COUNT(DISTINCT i) FROM entries WHERE matrix_id = " + lexical_cast<string>(of_id) + ";");
@@ -340,6 +300,7 @@ protected:
     bool destroy_c; // false by default (if c is passed in), true otherwise.
     uint id_;
 
+    id_set row_ids_;
     size_t row_count_;
     id_set column_ids_; // the column IDs we put in to obs
     size_t max_row_count_;
@@ -349,3 +310,5 @@ protected:
 
     omatrix* obs; // set of observations indexed by column
 };
+
+#endif // PHENOMATRIX_H_

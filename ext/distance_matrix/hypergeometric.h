@@ -5,8 +5,8 @@
  * Created on July 15, 2009, 2:46 PM
  */
 
-#ifndef _HYPERGEOMETRIC_H
-#define	_HYPERGEOMETRIC_H
+#ifndef HYPERGEOMETRIC_H_
+# define HYPERGEOMETRIC_H_
 
 
 #include <boost/unordered_map.hpp>

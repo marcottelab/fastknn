@@ -10,4 +10,6 @@ end
 
 $CPPFLAGS += " -DRICE"
 
+$objs = ["phenomatrix.o", "connection.o"]
+
 create_makefile('phenomatrix')

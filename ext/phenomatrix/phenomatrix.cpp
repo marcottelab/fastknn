@@ -5,8 +5,11 @@ using namespace Rice;
 
 extern "C"
 void Init_phenomatrix() {
+
+    Rice::Module rb_mFastknn = define_module("Fastknn");
+
     Data_Type<Phenomatrix> rb_cPhenomatrix =
-            define_class<Phenomatrix>("Phenomatrix")
+            define_class_under<Phenomatrix>(rb_mFastknn, "Phenomatrix")
             .define_constructor(Constructor<Phenomatrix,const std::string&, uint>())
             .define_method("parent_id", &Phenomatrix::rb_parent_id)
             .define_method("root_id", &Phenomatrix::rb_root_id)
@@ -17,9 +20,10 @@ void Init_phenomatrix() {
 }
 #endif
 
-
-int main() {
-    Phenomatrix p("dbname=crossval_development user=jwoods password=youwish1", 185);
-    return 0;
-}
+//#ifndef DISTANCE_MATRIX_H_
+//int main() {
+//    Phenomatrix p("dbname=crossval_development user=jwoods password=youwish1", 185);
+//    return 0;
+//}
+//#endif
 

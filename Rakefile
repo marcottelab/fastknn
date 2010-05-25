@@ -20,6 +20,6 @@ Rake::ExtensionTask.new('distance_matrix')
 Rake::TestTask.new(:test_all) do |t|
   t.test_files = FileList['test/test*.rb']
   t.warning = true
-  t.verbose = false
+  t.verbose = true
 end
 # Rake::ExtensionTask.new('classifier')

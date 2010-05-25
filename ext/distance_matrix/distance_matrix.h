@@ -1,93 +1,49 @@
-//#define RICE
+#ifndef DISTANCE_MATRIX_H_
+# define DISTANCE_MATRIX_H_
 
-#ifdef RICE
-#include <rice/Object.hpp>
-#include <rice/Array.hpp>
-#include <rice/Hash.hpp>
-using Rice::Array;
-using Rice::Object;
-#endif
 
-#include <list>
 #include <map>
 #include <set>
 #include <algorithm>
-#include <queue>
 using std::set;
-using std::list;
-using std::priority_queue;
 using std::set_intersection;
 
+#include "typedefs.h"
+#include "cparams.h"
 #include "hypergeometric.h"
 #include "euclidean.h"
-#include "../phenomatrix/phenomatrix.h"
-#include "type_shield.h"
-#include "naivebayes.h"
+#include "classifier.h"
 // typedef boost::numeric::ublas::mapped_matrix<double> dmatrix_t;
 
-typedef std::pair<uint,double>       id_dist_pair;
-typedef std::list<Phenomatrix>       matrix_list;
-typedef std::list<id_dist_pair>      proximity_list;
-typedef type_shield<double,uint>     dist_id;
-typedef std::priority_queue<dist_id> proximity_queue;
+typedef std::priority_queue<id_dist_iter, std::vector<id_dist_iter>, std::greater<vector<id_dist_iter>::value_type> > proximity_queue;
 
-size_t tree_matrix_row_count(conn_t& c, uint id) {
-    work_t w(c);
-    return 0;
-}
+
+//size_t tree_matrix_row_count(conn_t& c, uint id) {
+//    work_t w(c);
+//    return 0;
+//}
 
 
 // Arguments for classifier:
 // - k for knn
-float (*switch_classifier_function(const std::string& classifier))(size_t) {
-    std::map<std::string, float(*)(size_t)> choices;
-    choices["naivebayes"]     = &naivebayes;
-
-    return choices[classifier];
-}
-
-
-// Returns a function pointer to a distance function based on a request made via
-// a string.
-double (*switch_distance_function(const std::string& distance_measure))(size_t,size_t,size_t,size_t) {
-    std::map<std::string, double(*)(size_t,size_t,size_t,size_t)> choices;
-    choices["hypergeometric"] = &hypergeometric;
-    choices["euclidean"]      = &euclidean;
-    choices["manhattan"]      = &manhattan;
-
-    return choices[distance_measure];
-}
+//float (*switch_classifier_function(const std::string& classifier))(size_t) {
+//    std::map<std::string, float(*)(size_t)> choices;
+//    choices["naivebayes"]     = &naivebayes;
+//
+//    return choices[classifier];
+//}
 
 
-#ifdef RICE
-template <typename T, typename U>
-Rice::Array pair_to_array(const std::pair<T,U>& vals) {
-    Rice::Array a;
-    a.push( to_ruby<T>(vals.first) );
-    a.push( to_ruby<U>(vals.second) );
-    return a;
-}
-#endif
-
+class Classifier;
 
 class DistanceMatrix {
+    friend class Classifier;
+    friend class NaiveBayes;
 public:
 #ifdef RICE
     // This constructor is the one we use for the Ruby interface (RICE) since
     // Ruby would likely have trouble with std::set. Instead, it takes an array.
-    DistanceMatrix(const string& dbstr, uint predict_matrix_id, const Array& source_matrix_ids, const string& distfn, const string& classifier)
-    : c(new conn_t(dbstr)), destroy_c(true), predict_matrix_(c, predict_matrix_id),
-            distance_function(switch_distance_function(distfn)),
-            classifier_function(switch_classifier_function(classifier))
-    {
-        for (Array::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
-            uint id = from_ruby<uint>(*st);
-#ifdef DEBUG_TRACE
-            cerr << "distance_matrix.h: Adding phenomatrix " << id << " to distance matrix" << endl;
-#endif
-            source_matrices.push_back( Phenomatrix(c, id) );
-        }
-    }
+    DistanceMatrix(const string& dbstr, uint predict_matrix_id, const Rice::Array&, const string& distfn, Rice::Object);
 #endif
 
     // This constructor allows a connection to be shared among multiple objects by
@@ -97,21 +53,9 @@ public:
     //
     // In other words, this constructor is exclusively for calling from within
     // a C++ environment of some sort.
-    DistanceMatrix(conn_t* c_, uint predict_matrix_id, const id_set& source_matrix_ids, const string& distfn, const string& classifier)
-            : c(c_), destroy_c(false), predict_matrix_(c, predict_matrix_id),
-            distance_function(switch_distance_function(distfn)),
-            classifier_function(switch_classifier_function(classifier))
-    {
-        for (id_set::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
-            source_matrices.push_back( Phenomatrix(c, *st) );
-        }
-    }
+    DistanceMatrix(conn_t* c_, uint predict_matrix_id, const id_set& source_matrix_ids, const string& distfn, const cparams& classifier_params);
 
-
-    ~DistanceMatrix() {
-        // Do not delete shared connections!
-        if (destroy_c) delete c;
-    }
+    ~DistanceMatrix();
 
     //double distance(size_t k, size_t m, size_t n, size_t N) const {
     //    return (*distance_function)(k,m,n,N);
@@ -145,9 +89,7 @@ public:
 
     // Given a row i and a column j, calculate a score (using the classifier function)
     // for the gene's likelihood of being involved in the phenotype.
-    float predict(uint i, uint j) const {
-        return 0.0; // FIXME
-    }
+    pcolumn predict(uint j) const;
 
 
     // Return the distance, according to our distance function, between the two
@@ -164,28 +106,21 @@ public:
     // found!
     //
     // If you want multiple nearest, use a different function.
-    id_dist_pair nearest(uint j) const {
+    id_dist_iter nearest(uint j) const {
         // Do a priming read to save an assignment -- particularly since we're
         // likely to have only one source matrix.
         matrix_list::const_iterator pt = source_matrices.begin();
-        id_dist_pair min = nearest_given_matrix(pt, j);
+        id_dist_iter min = nearest_given_matrix(pt, j);
         ++pt;
 
         for (; pt != source_matrices.end(); ++pt) {
-            id_dist_pair min_tmp = nearest_given_matrix(pt, j);
-            if (min_tmp.second < min.second)
+            id_dist_iter min_tmp = nearest_given_matrix(pt, j);
+            if (min_tmp.distance < min.distance)
                 min = min_tmp;
         }
 
         return min;
     }
-
-
-    // Find the k nearest columns
-//    id_set knearest(uint j, size_t k) const {
-//        id_set pj = observations(j);
-//    }
-
 
     // Get the items that are common between j1 in predict matrix and j2 in
     // source matrix
@@ -215,12 +150,21 @@ public:
 
 
 #ifdef RICE
-    Rice::Hash rb_knearest(const uint& j, size_t k = 1) const {
+    Rice::Object rb_predict(uint j) const {
+        pcolumn predictions = predict(j);
+        Rice::Hash h;
+        for (pcolumn::const_iterator i = predictions.begin(); i != predictions.end(); ++i)
+            h[ to_ruby<uint>(i->first) ] = to_ruby<float>(i->second);
+        return h;
+    }
+
+
+    Rice::Object rb_knearest(uint j, size_t k = 1) const {
         proximity_queue q = knearest(j, k);
-        Rice::Hash ret;
+        Rice::Array ret;
         while (q.size() > 0) {
-            dist_id di = q.top();
-            ret[ to_ruby<uint>(di.second()) ]   =   di.first();
+            id_dist_iter di = q.top();
+            ret.push( di.to_a() );
             q.pop();
         }
 
@@ -229,22 +173,19 @@ public:
     
     // Returns an id or nil
     Rice::Object rb_nearest_id(uint j) const {
-        id_dist_pair n = nearest(j);
-        if (n.first == 0) return Rice::Object();
-        return Rice::Object( to_ruby<uint>(n.first) );
+        id_dist_iter n = nearest(j);
+        return (n.id == 0) ? Rice::Object() : Rice::Object( to_ruby<uint>(n.id) );
     }
     // Returns a double or nil
     Rice::Object rb_nearest_distance(uint j) const {
-        id_dist_pair n = nearest(j);
-        if (n.first == 0) return Rice::Object();
-        return Rice::Object( to_ruby<double>(n.second) );
+        id_dist_iter n = nearest(j);
+        return (n.id == 0) ? Rice::Object() : Rice::Object( to_ruby<double>(n.distance) );
     }
 
     // Returns both the id and the distance, or nil
     Rice::Object rb_nearest(uint j) const {
-        id_dist_pair n = nearest(j);
-        if (n.first == 0) return Rice::Object(); // nil
-        return pair_to_array<>(n);
+        id_dist_iter n = nearest(j);
+        return (n.id == 0) ? Rice::Object() : n.to_a();
     }
 
     // Return the distance, according to our distance function, between the two
@@ -303,6 +244,11 @@ public:
     }
     
 protected:
+
+    // Set up the classifier to use for predictions
+    void construct_classifier(const cparams&);
+
+
     double distance_given_matrix(const uint& j1, matrix_list::const_iterator source_matrix_iter, const uint& j2) const {
         return (*distance_function)(
                     predict_matrix_.observations_size(j1),
@@ -313,7 +259,7 @@ protected:
 
 
     // Find the single closest column in the source matrix to j in the predict matrix.
-    id_dist_pair nearest_given_matrix(matrix_list::const_iterator source_matrix_iter, const uint& j) const {
+    id_dist_iter nearest_given_matrix(matrix_list::const_iterator source_matrix_iter, const uint& j) const {
         id_set s = source_matrix_iter->column_ids();
 
         double min_dist = 100;
@@ -328,7 +274,7 @@ protected:
             }
         }
 
-        return std::make_pair<uint,double>(min_dist_id, min_dist);
+        return id_dist_iter(min_dist_id, min_dist, source_matrix_iter);
     }
 
 
@@ -346,14 +292,14 @@ protected:
 
         // Find the first k items
         while (k > 0) {
-            kth_so_far = q.top().first();
+            kth_so_far = q.top().distance;
             ret.push(q.top());
             q.pop();
             k--;
         }
 
         // Now include further items equal to kth_so_far
-        while (q.top() == kth_so_far) { ret.push(q.top()); q.pop(); }
+        while (q.top().distance == kth_so_far) { ret.push(q.top()); q.pop(); }
 
         return ret;
     }
@@ -374,7 +320,7 @@ protected:
             double d_jk = distance_given_matrix(j, source_matrix_iter, *st);
 
             if (d_jk <= kth_so_far) { // don't add distances that are already outside the range
-                q.push(dist_id(d_jk, *st));
+                q.push( id_dist_iter(*st, d_jk, source_matrix_iter) );
 
                 // We can set a boundary within k elements, and not accept anymore
                 // outside of it.
@@ -385,10 +331,10 @@ protected:
     }
 
 
-
     size_t max_intersection_size_given_matrix(matrix_list::const_iterator source_matrix_iter) const {
         return source_matrix_iter->tree_row_count();
     }
+    
 
     id_set intersection_given_matrix(const uint& j1, matrix_list::const_iterator source_matrix_iter, const uint& j2) const {
 #ifdef DEBUG_TRACE_INTERSECTION
@@ -411,6 +357,17 @@ protected:
         return intersection_given_matrix(j1, source_matrix_iter, j2).size();
     }
 
+    // Returns a function pointer to a distance function based on a request made via
+    // a string.
+    double (*switch_distance_function(const std::string& distance_measure))(size_t,size_t,size_t,size_t) {
+        std::map<std::string, double(*)(size_t,size_t,size_t,size_t)> choices;
+        choices["hypergeometric"] = &hypergeometric;
+        choices["euclidean"]      = &euclidean;
+        choices["manhattan"]      = &manhattan;
+
+        return choices[distance_measure];
+    }
+
 
     conn_t* c;
     bool destroy_c; // keep the connection intact upon destruction?
@@ -426,5 +383,8 @@ protected:
     double (*distance_function)(size_t, size_t, size_t, size_t);
 
     // Allow different classifiers to be subbed in
-    float (*classifier_function)(size_t);
+    Classifier* classifier;
 };
+
+
+#endif // DISTANCE_MATRIX_H_

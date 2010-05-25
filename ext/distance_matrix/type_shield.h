@@ -13,8 +13,8 @@
  * Created on July 23, 2009, 11:46 AM
  */
 
-#ifndef _TYPE_SHIELD_H
-#define	_TYPE_SHIELD_H
+#ifndef TYPE_SHIELD_H_
+#define	TYPE_SHIELD_H_
 
 template <typename T, typename S>
 class type_shield {

@@ -12,6 +12,6 @@ if RUBY_VERSION =~ /1.9/ then
 end
 
 $CPPFLAGS += " -DRICE"
-$objs = ["distance_matrix.o", "hypergeometric.o", "euclidean.o", "type_shield.o"]
+$objs = ["distance_matrix.o", "hypergeometric.o", "euclidean.o", "type_shield.o", "classifier.o", "phenomatrix.o", "connection.o"]
 
 create_makefile('distance_matrix')
