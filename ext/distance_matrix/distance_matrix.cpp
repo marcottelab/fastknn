@@ -22,12 +22,13 @@ void DistanceMatrix::construct_classifier(const cparams& classifier_params) {
     if (classifier_params.classifier == "naivebayes")
         classifier = new NaiveBayes(this, classifier_params.k);
     else {
-//#ifdef RICE
-        //throw Rice::Exception(rb_eArgumentError, "distance_matrix.o: Unrecognized classifier '" + classifier_params.classifier + "'!");
-//#else
-        cerr << "distance_matrix.o: Unrecognized classifier '" << classifier_params.classifier << "'!" << endl;
+        string err = "distance_matrix.o: Unrecognized classifier '" + classifier_params.classifier + "'!";
+#ifdef RICE
+        throw Rice::Exception(rb_eArgError, err.c_str());
+#else
+        cerr << err << endl;
         throw;
-//#endif
+#endif
     }
 }
 

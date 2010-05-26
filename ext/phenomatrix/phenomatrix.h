@@ -114,9 +114,13 @@ public:
             cerr << endl;
             // END TEST CODE
 #endif
-
-
+            string err = "phenomatrix.h: observations(1): Requested non-existent column " + lexical_cast<string>(j) + " on matrix " + lexical_cast<string>(id_);
+#ifdef RICE
+            throw Rice::Exception(rb_eArgError, err.c_str());
+#else
+            cerr << err << endl;
             throw;
+#endif
         }
         return jt->second;
     }
