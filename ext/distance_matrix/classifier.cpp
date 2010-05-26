@@ -49,6 +49,7 @@ boost::unordered_map<uint,float> NaiveBayes::operator()(uint j) const {
             pcolumn::iterator ret_it = ret.find(*it);
 
             // THIS IS THE ACTUAL NAIVE BAYES FORMULA!
+            // (inside the Mult operator)
             float score_mod = (1.0 - intersection_over_total * (1.0 - j2.distance));
 
             if (ret_it == ret.end()) ret[*it] = score_mod;         // insert
