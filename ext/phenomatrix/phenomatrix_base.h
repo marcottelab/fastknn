@@ -22,24 +22,32 @@ using std::endl;
 typedef boost::unordered_map<uint, std::set<uint> > omatrix;
 
 
+
+// Stores a single species phenomatrix without concern for the rows in the source
+// species.
+//
+// Remember, the source species isn't going to have as many rows as the predict
+// species. Phenomatrix, which inherits from PhenomatrixBase, will take into
+// account both species when producing total row counts, etc.
 class PhenomatrixBase {
 public:
     // This constructor is typically called by DistanceMatrix, so different matrices
     // can share the same database connection.
     //
     // At some point, it should be revised to accept a Ruby on Rails connection.
-    PhenomatrixBase(conn_t* c_, uint id)
+    PhenomatrixBase(conn_t* c_, uint id, bool is_base_class = true)
     : c(c_), destroy_c(false), id_(id), type_("Matrix"), obs(NULL)
     {
-        construct();
+        base_construct(is_base_class);
     }
 
     // This is the constructor used by Rice and the Ruby interface.
     PhenomatrixBase(const string& dbstr, uint id)
     : c(new conn_t(dbstr)), destroy_c(true), id_(id), type_("Matrix"), obs(NULL)
     {
-        construct();
+        base_construct(true);
     }
+
 
 
     // Copy constructor
@@ -48,9 +56,7 @@ public:
       destroy_c(false),
       id_(rhs.id_),
       row_ids_(rhs.row_ids_),
-      row_count_(rhs.row_count_),
       column_ids_(rhs.column_ids_),
-      max_row_count_(rhs.max_row_count_),
       root_id_(rhs.root_id_),
       parent_id_(rhs.parent_id_),
       type_(rhs.type_),
@@ -61,7 +67,7 @@ public:
 #endif
     }
 
-    ~PhenomatrixBase() {
+    virtual ~PhenomatrixBase() {
         if (destroy_c) delete c;
         if (obs) delete obs;
     }
@@ -78,10 +84,7 @@ public:
 #endif
 
     // Get the number of unique rows in the matrix. Naive to node/tree/leaf status.
-    size_t naive_row_count() const { return row_count_; }
-
-    // Get the number of rows in the matrix tree.
-    size_t tree_row_count() const { return max_row_count_; }
+    size_t row_count() const { return row_ids_.size(); }
 
     // Returns the number of columns in this matrix tree, which may not be the
     // same as the number of columns in the obs matrix (but should).
@@ -159,16 +162,20 @@ public:
 protected:
     // Surrogate constructor, called by both default constructors, but not the
     // copy constructor.
-    void construct() {
+    void base_construct(bool base = true) {
         // Get the information about the immediate parent and the root of the tree of matrices.
         std::pair<uint,uint> parent_and_root = fetch_parent_and_root_id();
         parent_id_ = parent_and_root.first;
         root_id_   = parent_and_root.second;
 
+        if (base)
+            inherit_construct();
+    }
+
+    // This will vary from base to child.
+    void inherit_construct() {
         // Get matrix attributes
         row_ids_ = fetch_row_ids();
-        row_count_ = fetch_row_count();
-        max_row_count_ = fetch_max_row_count();
         column_ids_ = fetch_column_ids();
 
         // Create the observation matrix
@@ -187,11 +194,27 @@ protected:
     }
 
 
+    // There are other ways to arrange these two functions, but only this one appears
+    // to work with Rice.
     string fetch_matrix_type(uint matrix_id) {
         return fetch_type(c, "matrices", matrix_id);
     }
     string fetch_matrix_type() {
         return fetch_type(c, "matrices", id_);
+    }
+
+
+    virtual string load_matrix_sql(uint matrix_id) const {
+#ifdef DEBUG_TRACE_INHERITED_CONSTRUCTION
+        cerr << "phenomatrix_base.h: load_matrix_sql" << endl;
+#endif
+        return "SELECT DISTINCT i,j FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + " AND type = 'Cell';";
+    }
+    virtual string row_count_sql(uint matrix_id) const {
+        return "SELECT COUNT(DISTINCT i) FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + ";";
+    }
+    virtual string row_ids_sql(uint matrix_id) const {
+        return "SELECT DISTINCT i FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + " ORDER BY i;";
     }
 
 
@@ -201,7 +224,17 @@ protected:
         // type_ = fetch_type(matrix_id);
 
         work_t w(*c);
-        result_t r = w.exec("SELECT DISTINCT i,j FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + " AND type = 'Cell';");
+        result_t r = w.exec( load_matrix_sql(matrix_id) );
+
+        if (r.size() == 0) {
+            string err = "phenomatrix_base.h: load_matrix(1): Could not load matrix.";
+#ifdef RICE
+            throw Rice::Exception(rb_eArgError, err.c_str());
+#else
+            cerr << err << endl;
+            throw;
+#endif
+        }
 
         for (result_t::const_iterator rt = r.begin(); rt != r.end(); ++rt) {
             uint i = 0, j = 0;
@@ -213,10 +246,11 @@ protected:
     }
 
 
+
     // Force a mask on top of a Node
     void mask_load_matrix() {
         work_t w(*c);
-        result_t r = w.exec("SELECT DISTINCT i,j FROM entries WHERE matrix_id = " + lexical_cast<string>(id_) + " AND type = 'Cell';");
+        result_t r = w.exec( this->load_matrix_sql(id_) );
 
         for (result_t::const_iterator rt = r.begin(); rt != r.end(); ++rt) {
             uint i = 0, j = 0;
@@ -244,13 +278,13 @@ protected:
 
 
     id_set fetch_row_ids(uint of_id) const {
-        return fetch_id_set(c, "SELECT DISTINCT i FROM entries WHERE matrix_id = " + lexical_cast<string>(of_id) + " ORDER BY i;");
+        return fetch_id_set(c, row_ids_sql(of_id));
     }
     id_set fetch_row_ids() const { return fetch_row_ids(id_); }
 
     // Determine the number of unique rows in the matrix. Naive to node/tree/leaf status.
     size_t fetch_row_count(uint of_id) const {
-        return fetch_count(c, "SELECT COUNT(DISTINCT i) FROM entries WHERE matrix_id = " + lexical_cast<string>(of_id) + ";");
+        return fetch_count(c, row_count_sql(of_id));
     }
     size_t fetch_row_count() const { return fetch_row_count(id_); } // default arg
 
@@ -274,10 +308,10 @@ protected:
     }
 
     // Determine the number of rows in the matrix tree.
-    size_t fetch_max_row_count() const {
+    size_t fetch_root_row_count() const {
         uint rid = root_id();
         if (rid == 0 || rid == id_)
-            return row_count_;
+            return row_ids_.size();
         else
             return fetch_count(c, "SELECT COUNT(DISTINCT i) FROM entries WHERE matrix_id = " + lexical_cast<string>(rid) + ";");
     }
@@ -305,9 +339,7 @@ protected:
     uint id_;
 
     id_set row_ids_;
-    size_t row_count_;
-    id_set column_ids_; // the column IDs we put in to obs
-    size_t max_row_count_;
+    id_set column_ids_;
     uint root_id_;
     uint parent_id_;
     string type_;
