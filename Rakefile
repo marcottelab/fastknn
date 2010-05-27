@@ -17,9 +17,23 @@ end
 Rake::ExtensionTask.new('phenomatrix')
 Rake::ExtensionTask.new('distance_matrix')
 
-Rake::TestTask.new(:test_all) do |t|
+namespace :test do
+Rake::TestTask.new(:all) do |t|
   t.test_files = FileList['test/test*.rb']
   t.warning = true
   t.verbose = true
+end
+
+Rake::TestTask.new(:phenomatrix) do |t|
+  t.test_files = FileList['test/test_phenomatrix*.rb']
+  t.warning = true
+  t.verbose = true
+end
+
+Rake::TestTask.new(:distance_matrix) do |t|
+  t.test_files = FileList['test/test_distance_matrix*.rb']
+  t.warning = true
+  t.verbose = true
+end
 end
 # Rake::ExtensionTask.new('classifier')
