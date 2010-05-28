@@ -14,17 +14,9 @@ end
 Rake::GemPackageTask.new(spec) do |pkg|
 end
 
-Rake::ExtensionTask.new('connection')
-Rake::ExtensionTask.new('phenomatrix')
 Rake::ExtensionTask.new('distance_matrix')
 
 namespace :test do
-Rake::TestTask.new(:all) do |t|
-  t.test_files = FileList['test/test*.rb']
-  t.warning = true
-  t.verbose = true
-end
-
 Rake::TestTask.new(:phenomatrix) do |t|
   t.test_files = FileList['test/test_phenomatrix_extn.rb']
   t.warning = true
@@ -43,4 +35,3 @@ Rake::TestTask.new(:distance_matrix) do |t|
   t.verbose = true
 end
 end
-# Rake::ExtensionTask.new('classifier')
