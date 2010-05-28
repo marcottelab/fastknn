@@ -52,66 +52,14 @@ void PhenomatrixPair::knearest(proximity_queue& q, const uint& j, const size_t& 
 
 using namespace Rice;
 
-template <>
-Object to_ruby<id_set>(id_set const & d) {
-    Array ary;
-    for (id_set::const_iterator i = d.begin(); i != d.end(); ++i)
-        ary.push( to_ruby<uint>(*i) );
-    return ary;
-}
-
-
-
-// Convert from Rice::Array to std::set
-template <>
-id_set from_ruby<id_set >(Object x) {
-    Array ary(x);
-    id_set result;
-    for (Array::iterator i = ary.begin(); i != ary.end(); ++i)
-        result.insert(from_ruby<uint>(*i));
-    return result;
-}
-
 
 extern "C"
 void Init_phenomatrix() {
 
     Rice::Module rb_mFastknn = define_module("Fastknn");
 
-    Data_Type<Connection> rb_cConnection =
-            define_class_under<Connection>(rb_mFastknn, "Connection")
-            .define_constructor(Constructor<Connection>())
-            .define_method("connect", &Connection::connect)
-            .define_method("connected?", &Connection::connected)
-            .define_method("test_singleton", &Connection::instance)
-            .define_method("count", &Connection::count)
-            .define_method("instance", &Connection::instance);
-
-    Data_Type<PhenomatrixBase> rb_cPhenomatrixBase =
-            define_class_under<PhenomatrixBase>(rb_mFastknn, "PhenomatrixBase")
-            .define_constructor(Constructor<PhenomatrixBase,uint>())
-            .define_method("parent_id", &PhenomatrixBase::rb_parent_id)
-            .define_method("root_id", &PhenomatrixBase::rb_root_id)
-            .define_method("id", &PhenomatrixBase::id)
-            .define_method("observations_count", &PhenomatrixBase::observations_size)
-            .define_method("has_column?", &PhenomatrixBase::has_column)
-            .define_method("row_count", &PhenomatrixBase::row_count);
-
-    Data_Type<Phenomatrix> rb_cPhenomatrix =
-            define_class_under<Phenomatrix, PhenomatrixBase>(rb_mFastknn, "Phenomatrix")
-            .define_constructor(Constructor<Phenomatrix, uint, uint>())
-            .define_method("source_id", &Phenomatrix::source_id);
-
-    Data_Type<PhenomatrixPair> rb_cPhenomatrixPair =
-            define_class_under<PhenomatrixPair>(rb_mFastknn, "PhenomatrixPair")
-            .define_constructor(Constructor<PhenomatrixPair, uint, uint, const string&>())
-            .define_method("distance", &PhenomatrixPair::distance)
-            .define_method("nearest", &PhenomatrixPair::nearest)
-            .define_method("predict_matrix_has_column?", &PhenomatrixPair::predict_matrix_has_column)
-            .define_method("source_matrix_has_column?", &PhenomatrixPair::source_matrix_has_column)
-            .define_method("push_mask", &PhenomatrixPair::push_mask)
-            .define_method("pop_mask", &PhenomatrixPair::pop_mask)
-            ;
+    #include "rice_connection.cpp"
+    #include "rice_phenomatrix.cpp"
 
 }
 #else

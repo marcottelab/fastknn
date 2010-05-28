@@ -59,7 +59,6 @@ public:
 
     PhenomatrixBase(const PhenomatrixBase& rhs, const id_set& remove_rows)
     : id_(rhs.id_),
-      row_ids_(rhs.row_ids_),
       column_ids_(rhs.column_ids_),
       root_id_(rhs.root_id_),
       parent_id_(rhs.parent_id_),
@@ -69,6 +68,13 @@ public:
 #ifdef DEBUG_TRACE_COPY
         cerr << "phenomatrix_base.h: Copy constructor with mask called! id = " << id_ << endl;
 #endif
+
+        // Remove rows from row_ids list
+        set_difference(rhs.row_ids_.begin(), rhs.row_ids_.end(),
+                       remove_rows.begin(), remove_rows.end(),
+                       std::insert_iterator<id_set>(row_ids_, row_ids_.begin()));
+
+        // Remove rows from each column
         for (id_set::const_iterator c = column_ids_.begin(); c != column_ids_.end(); ++c) {
             // Copy the sets with certain things removed.
             set_difference((*(rhs.obs))[*c].begin(), (*(rhs.obs))[*c].end(),

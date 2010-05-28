@@ -53,15 +53,6 @@ public:
         s.push(Phenomatrix(s.top(), mask_rows));
     }
 
-#ifdef RICE
-    void rb_push_mask(Array mask_ary) {
-        id_set mask_set;
-        for (Array::iterator i = mask_ary.begin(); i != mask_ary.end(); ++i)
-            mask_set.insert(from_ruby<uint>(*i));
-        push_mask(mask_set);
-    }
-#endif
-
 
     // Restores removed rows from the matrices on which we're calculating distances.
     bool pop_mask() {
@@ -112,6 +103,10 @@ public:
 
     size_t max_intersection_size() const {
         return s.top().row_count();
+    }
+
+    id_set observations(uint j) const {
+        return s.top().observations(j);
     }
 protected:
 

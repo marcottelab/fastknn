@@ -16,17 +16,6 @@ Rice::Array id_dist_iter::to_a() const {
 }
 
 
-template<>
-Rice::Object to_ruby<id_dist>(id_dist const & d) {
-    return to_ruby<Array>(d.to_a());
-}
-
-template<>
-Rice::Object to_ruby<id_dist_iter>(id_dist_iter const & d) {
-    return to_ruby<Array>(d.to_a());
-}
-
-
 template <typename T, typename U>
 Rice::Array pair_to_array(const std::pair<T,U>& vals) {
     Rice::Array a;
@@ -34,8 +23,6 @@ Rice::Array pair_to_array(const std::pair<T,U>& vals) {
     a.push( to_ruby<U>(vals.second) );
     return a;
 }
-
-#include "ruby_conversions.h"
 
 #endif
 

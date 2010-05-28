@@ -45,7 +45,9 @@ public:
 
     static Connection& instance() {
         static Connection the_connection;
+#ifdef DEBUG_CONNECTION_POINTER
         cerr << "c: '" << c << "'" << endl;
+#endif
         return the_connection;
     }
 

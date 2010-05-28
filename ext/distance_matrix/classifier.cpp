@@ -43,7 +43,7 @@ boost::unordered_map<uint,float> NaiveBayes::operator()(uint j) const {
 
         // Get the observations in those columns
         id_set j2_obs = j2.matrix_iter->observations( j2.id );
-        double intersection_over_total = d->intersection_size_given_matrix( j, j2.matrix_iter, j2.id ) / double(j2_obs.size());
+        double intersection_over_total = j2.matrix_iter->intersection( j, j2.id ).size() / double(j2_obs.size());
 
         for (id_set::const_iterator it = j2_obs.begin(); it != j2_obs.end(); ++it) {
             pcolumn::iterator ret_it = ret.find(*it);
