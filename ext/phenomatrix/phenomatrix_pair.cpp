@@ -50,15 +50,28 @@ void PhenomatrixPair::knearest(proximity_queue& q, const uint& j, const size_t& 
 
 #ifdef RICE
 
+using namespace Rice;
+
 template <>
-Rice::Object to_ruby<id_set>(id_set const & d) {
-    Rice::Array ary;
+Object to_ruby<id_set>(id_set const & d) {
+    Array ary;
     for (id_set::const_iterator i = d.begin(); i != d.end(); ++i)
         ary.push( to_ruby<uint>(*i) );
     return ary;
 }
 
-using namespace Rice;
+
+
+// Convert from Rice::Array to std::set
+template <>
+id_set from_ruby<id_set >(Object x) {
+    Array ary(x);
+    id_set result;
+    for (Array::iterator i = ary.begin(); i != ary.end(); ++i)
+        result.insert(from_ruby<uint>(*i));
+    return result;
+}
+
 
 extern "C"
 void Init_phenomatrix() {
@@ -96,7 +109,7 @@ void Init_phenomatrix() {
             .define_method("nearest", &PhenomatrixPair::nearest)
             .define_method("predict_matrix_has_column?", &PhenomatrixPair::predict_matrix_has_column)
             .define_method("source_matrix_has_column?", &PhenomatrixPair::source_matrix_has_column)
-            .define_method("push_mask", &PhenomatrixPair::rb_push_mask)
+            .define_method("push_mask", &PhenomatrixPair::push_mask)
             .define_method("pop_mask", &PhenomatrixPair::pop_mask)
             ;
 

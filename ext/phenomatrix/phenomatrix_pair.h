@@ -11,9 +11,6 @@ using std::stack;
 #include "euclidean.h"
 #include "phenomatrix.h"
 
-#ifdef RICE
-#include "ruby_conversions.h"
-#endif
 
 class id_dist;
 class id_dist_iter;
@@ -51,10 +48,11 @@ public:
 
 
     // Removes rows from the matrices on which we're calculating distances.
-    void push_mask(const id_set& mask_rows) {
+    void push_mask(id_set mask_rows) {
         p.push(Phenomatrix(p.top(), mask_rows));
         s.push(Phenomatrix(s.top(), mask_rows));
     }
+
 #ifdef RICE
     void rb_push_mask(Array mask_ary) {
         id_set mask_set;

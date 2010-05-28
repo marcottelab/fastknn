@@ -35,6 +35,8 @@ Rice::Array pair_to_array(const std::pair<T,U>& vals) {
     return a;
 }
 
+#include "ruby_conversions.h"
+
 #endif
 
 id_dist_iter::id_dist_iter(const uint& id_, const double& d_, matrix_list::const_iterator m_iter_, uint matrix_id_)

@@ -1,11 +1,11 @@
-#ifndef RUBY_CONVERSIONS_H_
-# define RUBY_CONVERSIONS_H_
-
+//#ifndef RUBY_CONVERSIONS_H_
+//# define RUBY_CONVERSIONS_H_
+//
 //#include <rice/Array.hpp>
+//#include <rice/Data_Type.hpp>
 //#include <set>
 //
-//typedef std::set<uint> id_set;
+//using namespace Rice;
 //
 //
-
-#endif // RUBY_CONVERSIONS_H_
+//#endif // RUBY_CONVERSIONS_H_
