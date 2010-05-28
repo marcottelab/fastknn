@@ -63,7 +63,7 @@ DistanceMatrix::DistanceMatrix(const string& dbstr, uint predict_matrix_id, cons
     for (Array::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
         uint id = from_ruby<uint>(*st);
 #ifdef DEBUG_TRACE
-        cerr << "distance_matrix.h: Adding phenomatrix " << id << " to distance matrix" << endl;
+        cerr << "distance_matrix.o: Adding phenomatrix " << id << " to distance matrix" << endl;
 #endif
         source_matrices.push_back( Phenomatrix(c, id) );
     }

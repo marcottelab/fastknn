@@ -10,12 +10,8 @@ using std::set_intersection;
 
 #include "typedefs.h"
 #include "cparams.h"
-#include "hypergeometric.h"
-#include "euclidean.h"
 #include "classifier.h"
 // typedef boost::numeric::ublas::mapped_matrix<double> dmatrix_t;
-
-typedef std::priority_queue<id_dist_iter, std::vector<id_dist_iter>, std::greater<vector<id_dist_iter>::value_type> > proximity_queue;
 
 
 //size_t tree_matrix_row_count(conn_t& c, uint id) {
@@ -357,17 +353,6 @@ protected:
         return intersection_given_matrix(j1, source_matrix_iter, j2).size();
     }
 
-    // Returns a function pointer to a distance function based on a request made via
-    // a string.
-    double (*switch_distance_function(const std::string& distance_measure))(size_t,size_t,size_t,size_t) {
-        std::map<std::string, double(*)(size_t,size_t,size_t,size_t)> choices;
-        choices["hypergeometric"] = &hypergeometric;
-        choices["euclidean"]      = &euclidean;
-        choices["manhattan"]      = &manhattan;
-
-        return choices[distance_measure];
-    }
-
 
     conn_t* c;
     bool destroy_c; // keep the connection intact upon destruction?
@@ -378,9 +363,6 @@ protected:
     // after this class has been destroyed. They'll have to create new ones.
     matrix_list source_matrices;
     Phenomatrix predict_matrix_;
-
-    // Allow different distance functions to be subbed in.
-    double (*distance_function)(size_t, size_t, size_t, size_t);
 
     // Allow different classifiers to be subbed in
     Classifier* classifier;

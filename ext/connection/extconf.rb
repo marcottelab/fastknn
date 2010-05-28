@@ -10,6 +10,6 @@ end
 
 $CPPFLAGS += " -DRICE"
 
-$objs = ["phenomatrix_pair.o", "connection.o", "euclidean.o", "hypergeometric.o", "id_dist.o"]
+$objs = ["connection.o"]
 
-create_makefile('phenomatrix')
+create_makefile('connection')

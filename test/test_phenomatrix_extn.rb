@@ -3,14 +3,14 @@ require "test_benchmark"
 
 require "test/unit"
 
-$:.unshift File.dirname(__FILE__) + "/../ext/phenomatrix"
-require "phenomatrix.so"
+#$:.unshift File.dirname(__FILE__) + "/../ext/phenomatrix"
+require "fastknn"
 
 class TestPhenomatrixExtn < Test::Unit::TestCase
   def setup
-    @@p ||= Fastknn::Phenomatrix.new("dbname=crossval_development user=jwoods password=youwish1", 185, 3)
-    @@pb ||= Fastknn::PhenomatrixBase.new("dbname=crossval_development user=jwoods password=youwish1", 185)
-    @@pp ||= Fastknn::Phenomatrix.new("dbname=crossval_development user=jwoods password=youwish1", 185, 185)
+    @@p ||= Fastknn::Phenomatrix.new(185, 3)
+    @@pb ||= Fastknn::PhenomatrixBase.new(185)
+    @@pp ||= Fastknn::Phenomatrix.new(185, 185)
   end
 
   def test_truth
@@ -18,7 +18,7 @@ class TestPhenomatrixExtn < Test::Unit::TestCase
   end
   
   def test_parent_and_root_id
-    @@p193 ||= Fastknn::PhenomatrixBase.new("dbname=crossval_development user=jwoods password=youwish1", 199)
+    @@p193 ||= Fastknn::PhenomatrixBase.new(199)
     assert @@p193.parent_id == 193
     assert @@p.root_id == 185
   end

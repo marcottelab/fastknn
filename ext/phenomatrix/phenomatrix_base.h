@@ -35,26 +35,16 @@ public:
     // can share the same database connection.
     //
     // At some point, it should be revised to accept a Ruby on Rails connection.
-    PhenomatrixBase(conn_t* c_, uint id, bool is_base_class = true)
-    : c(c_), destroy_c(false), id_(id), type_("Matrix"), obs(NULL)
+    PhenomatrixBase(uint id, bool is_base_class = true)
+    : id_(id), type_("Matrix"), obs(NULL)
     {
         base_construct(is_base_class);
     }
 
-    // This is the constructor used by Rice and the Ruby interface.
-    PhenomatrixBase(const string& dbstr, uint id)
-    : c(new conn_t(dbstr)), destroy_c(true), id_(id), type_("Matrix"), obs(NULL)
-    {
-        base_construct(true);
-    }
-
-
 
     // Copy constructor
     PhenomatrixBase(const PhenomatrixBase& rhs)
-    : c(rhs.c),
-      destroy_c(false),
-      id_(rhs.id_),
+    : id_(rhs.id_),
       row_ids_(rhs.row_ids_),
       column_ids_(rhs.column_ids_),
       root_id_(rhs.root_id_),
@@ -63,12 +53,31 @@ public:
       obs(new omatrix(*(rhs.obs)))
     {
 #ifdef DEBUG_TRACE_COPY
-        cerr << "phenomatrix.h: Copy constructor called! id = " << id_ << endl;
+        cerr << "phenomatrix_base.h: Copy constructor called! id = " << id_ << endl;
 #endif
     }
 
+    PhenomatrixBase(const PhenomatrixBase& rhs, const id_set& remove_rows)
+    : id_(rhs.id_),
+      row_ids_(rhs.row_ids_),
+      column_ids_(rhs.column_ids_),
+      root_id_(rhs.root_id_),
+      parent_id_(rhs.parent_id_),
+      type_(rhs.type_),
+      obs(new omatrix(column_ids_.size()))
+    {
+#ifdef DEBUG_TRACE_COPY
+        cerr << "phenomatrix_base.h: Copy constructor with mask called! id = " << id_ << endl;
+#endif
+        for (id_set::const_iterator c = column_ids_.begin(); c != column_ids_.end(); ++c) {
+            // Copy the sets with certain things removed.
+            set_difference((*(rhs.obs))[*c].begin(), (*(rhs.obs))[*c].end(),
+                           remove_rows.begin(), remove_rows.end(),
+                           std::insert_iterator<id_set>((*obs)[*c], (*obs)[*c].begin()));
+        }
+    }
+
     virtual ~PhenomatrixBase() {
-        if (destroy_c) delete c;
         if (obs) delete obs;
     }
 
@@ -107,7 +116,8 @@ public:
     id_set observations(uint j) const {
         omatrix::const_iterator jt = obs->find(j);
         if (jt == obs->end()) {
-            cerr << "phenomatrix.h: observations(1): Requested non-existent column " << j << " on matrix " << id_ << endl;
+            cerr << "phenomatrix_base.h: observations(1): Requested non-existent column " << j << " on matrix " << id_ << endl;
+            if (j == 0) throw;
 
 #ifdef DEBUG_TRACE_DISTANCE
             // TEST CODE
@@ -117,7 +127,7 @@ public:
             cerr << endl;
             // END TEST CODE
 #endif
-            string err = "phenomatrix.h: observations(1): Requested non-existent column " + lexical_cast<string>(j) + " on matrix " + lexical_cast<string>(id_);
+            string err = "phenomatrix_base.h: observations(1): Requested non-existent column " + lexical_cast<string>(j) + " on matrix " + lexical_cast<string>(id_);
 #ifdef RICE
             throw Rice::Exception(rb_eArgError, err.c_str());
 #else
@@ -197,10 +207,10 @@ protected:
     // There are other ways to arrange these two functions, but only this one appears
     // to work with Rice.
     string fetch_matrix_type(uint matrix_id) {
-        return fetch_type(c, "matrices", matrix_id);
+        return Connection::instance().fetch_type("matrices", matrix_id);
     }
     string fetch_matrix_type() {
-        return fetch_type(c, "matrices", id_);
+        return Connection::instance().fetch_type("matrices", id_);
     }
 
 
@@ -223,8 +233,9 @@ protected:
         // Find out whether this is a node or leaf matrix.
         // type_ = fetch_type(matrix_id);
 
-        work_t w(*c);
-        result_t r = w.exec( load_matrix_sql(matrix_id) );
+        //work_t w(*c);
+        work_t* w = Connection::instance().work();
+        result_t r = w->exec( load_matrix_sql(matrix_id) );
 
         if (r.size() == 0) {
             string err = "phenomatrix_base.h: load_matrix(1): Could not load matrix.";
@@ -243,14 +254,16 @@ protected:
 
             add_observation(i, j);
         }
+
+        delete w;
     }
 
 
 
     // Force a mask on top of a Node
     void mask_load_matrix() {
-        work_t w(*c);
-        result_t r = w.exec( this->load_matrix_sql(id_) );
+        work_t* w = Connection::instance().work();
+        result_t r = w->exec( this->load_matrix_sql(id_) );
 
         for (result_t::const_iterator rt = r.begin(); rt != r.end(); ++rt) {
             uint i = 0, j = 0;
@@ -259,6 +272,7 @@ protected:
 
             remove_observation(i, j);
         }
+        delete w;
     }
 
 
@@ -278,22 +292,22 @@ protected:
 
 
     id_set fetch_row_ids(uint of_id) const {
-        return fetch_id_set(c, row_ids_sql(of_id));
+        return Connection::instance().fetch_id_set(row_ids_sql(of_id));
     }
     id_set fetch_row_ids() const { return fetch_row_ids(id_); }
 
     // Determine the number of unique rows in the matrix. Naive to node/tree/leaf status.
     size_t fetch_row_count(uint of_id) const {
-        return fetch_count(c, row_count_sql(of_id));
+        return Connection::instance().fetch_count(row_count_sql(of_id));
     }
     size_t fetch_row_count() const { return fetch_row_count(id_); } // default arg
 
     size_t fetch_column_count(uint of_id) const {
-        return fetch_count(c, "SELECT COUNT(DISTINCT j) FROM entries WHERE matrix_id = " + lexical_cast<string>(of_id) + ";");
+        return Connection::instance().fetch_count("SELECT COUNT(DISTINCT j) FROM entries WHERE matrix_id = " + lexical_cast<string>(of_id) + ";");
     }
 
     id_set fetch_column_ids(uint of_id) const {
-        return fetch_id_set(c, "SELECT DISTINCT j FROM entries WHERE matrix_id = " + lexical_cast<string>(of_id) + " ORDER BY j;");
+        return Connection::instance().fetch_id_set("SELECT DISTINCT j FROM entries WHERE matrix_id = " + lexical_cast<string>(of_id) + " ORDER BY j;");
     }
     id_set fetch_column_ids() const { return fetch_column_ids(id_); }
 
@@ -313,7 +327,7 @@ protected:
         if (rid == 0 || rid == id_)
             return row_ids_.size();
         else
-            return fetch_count(c, "SELECT COUNT(DISTINCT i) FROM entries WHERE matrix_id = " + lexical_cast<string>(rid) + ";");
+            return Connection::instance().fetch_count("SELECT COUNT(DISTINCT i) FROM entries WHERE matrix_id = " + lexical_cast<string>(rid) + ";");
     }
 
     std::pair<uint,uint> fetch_parent_and_root_id() const {
@@ -330,12 +344,10 @@ protected:
 
     // Get the ID of the parent of some other matrix
     uint parent_id(uint of_id) const {
-        return fetch_id(c, "SELECT DISTINCT parent_id FROM matrices WHERE id = " + lexical_cast<string>(of_id) + ";");
+        return Connection::instance().fetch_id("SELECT DISTINCT parent_id FROM matrices WHERE id = " + lexical_cast<string>(of_id) + ";");
     }
 
 
-    conn_t* c;
-    bool destroy_c; // false by default (if c is passed in), true otherwise.
     uint id_;
 
     id_set row_ids_;
