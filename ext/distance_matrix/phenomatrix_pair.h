@@ -2,6 +2,8 @@
 # define PHENOMATRIX_PAIR_H_
 
 #include <stack>
+#include <list>
+using std::list;
 using std::stack;
 
 #include "id_dist.h"
@@ -30,27 +32,27 @@ typedef std::list<PhenomatrixPair>          matrix_list;
 class PhenomatrixPair {
 public:
     PhenomatrixPair(uint id, uint given_id, const string& distance_fn)
-    : p(create_phenomatrix(id, given_id)),      // predict species matrix
-      s(create_phenomatrix(given_id, given_id)),// source species matrix
+    : p(create_phenomatrix_stack(id, given_id)),      // predict species matrix
+      s(create_phenomatrix_list(given_id, given_id)), // source species matrix
       distance_function(switch_distance_function(distance_fn))
     { }
 
     PhenomatrixPair(const string& dbstr, uint id, uint given_id, const string& distance_fn)
-    : p(create_phenomatrix(id, given_id)),
-      s(create_phenomatrix(given_id, given_id)),
+    : p(create_phenomatrix_stack(id, given_id)),
+      s(create_phenomatrix_list(given_id, given_id)),
       distance_function(switch_distance_function(distance_fn))
     { }
     
     // Return the ID of the source matrix
     uint id() const {
-        return s.top().id();
+        return s.back().id();
     }
 
 
     // Removes rows from the matrices on which we're calculating distances.
     void push_mask(id_set mask_rows) {
         p.push(Phenomatrix(p.top(), mask_rows));
-        s.push(Phenomatrix(s.top(), mask_rows));
+        s.push_back( Phenomatrix( s.back(), mask_rows ) );
     }
 
 
@@ -58,7 +60,7 @@ public:
     bool pop_mask() {
         if (p.size() == 1) return false;
         p.pop();
-        s.pop();
+        s.pop_back();
         return true;
     }
 
@@ -67,7 +69,7 @@ public:
     // columns.
     double distance(uint j1, uint j2) const {
         size_t obs_j1 = p.top().observations_size(j1);
-        size_t obs_j2 = s.top().observations_size(j2);
+        size_t obs_j2 = s.back().observations_size(j2);
 
         if (obs_j1 == 0 || obs_j2 == 0) return MAX_DISTANCE;
 
@@ -75,7 +77,7 @@ public:
     }
 
     bool source_matrix_has_column(uint j) const {
-        return s.top().has_column(j);
+        return s.back().has_column(j);
     }
 
     bool predict_matrix_has_column(uint j) const {
@@ -93,7 +95,7 @@ public:
 
     id_set intersection(uint j1, uint j2) const {
         const id_set& s1 = p.top().observations(j1);
-        const id_set& s2 = s.top().observations(j2);
+        const id_set& s2 = s.back().observations(j2);
 
         id_set ret;
         set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(),
@@ -102,11 +104,20 @@ public:
     }
 
     size_t max_intersection_size() const {
-        return s.top().row_count();
+        return s.back().row_count();
     }
 
     id_set observations(uint j) const {
-        return s.top().observations(j);
+        return s.back().observations(j);
+    }
+
+    list<Phenomatrix>::const_reverse_iterator s_rbegin() const {
+        return s.rbegin();
+    }
+
+    // Return the number of matrices on the stack.
+    size_t size() const {
+        return s.size();
     }
 protected:
 
@@ -121,13 +132,18 @@ protected:
         return choices[distance_measure];
     }
 
-    static stack<Phenomatrix> create_phenomatrix(uint id, uint given_id) {
+    static stack<Phenomatrix> create_phenomatrix_stack(uint id, uint given_id) {
         stack<Phenomatrix> new_stack; new_stack.push(Phenomatrix(id, given_id));
         return new_stack;
     }
 
+    static list<Phenomatrix> create_phenomatrix_list(uint id, uint given_id) {
+        list<Phenomatrix> new_list; new_list.push_back(Phenomatrix(id, given_id));
+        return new_list;
+    }
+
     stack<Phenomatrix> p;
-    stack<Phenomatrix> s;
+    list<Phenomatrix> s;
 
     // Allow different distance functions to be subbed in.
     double (*distance_function)(size_t, size_t, size_t, size_t);

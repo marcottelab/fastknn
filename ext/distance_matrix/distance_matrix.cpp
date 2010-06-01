@@ -131,29 +131,6 @@ pcolumn from_ruby<pcolumn>(Object x) {
     return xmap;
 }
 
-/*
-// This constructor is the one we use for the Ruby interface (RICE) since
-// Ruby would likely have trouble with std::set. Instead, it takes an array.
-DistanceMatrix::DistanceMatrix(uint predict_matrix_id, const Array& source_matrix_ids, const string& distfn, Rice::Object classifier_params_h)
- : predict_matrix_(c, predict_matrix_id),
-   distance_function(switch_distance_function(distfn))
-{
-    // Convert from Hash to cparams
-    cparams classifier_params( from_ruby<Rice::Symbol>(classifier_params_h.call("fetch", Rice::Symbol("classifier"))).str() );
-    classifier_params.k = from_ruby<uint>(classifier_params_h.call("fetch", Rice::Symbol("k")));
-    
-    construct_classifier( classifier_params );
-
-    for (Array::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
-        uint id = from_ruby<uint>(*st);
-#ifdef DEBUG_TRACE
-        cerr << "distance_matrix.o: Adding phenomatrix " << id << " to distance matrix" << endl;
-#endif
-        source_matrices.push_back( Phenomatrix(c, id) );
-    }
-}
- * */
-
 
 
 // IT IS CRITICAL THAT Rice:: TYPES LEAVE OFF THE NAMESPACE BEYOND THIS POINT!
@@ -176,10 +153,16 @@ void Init_distance_matrix() {
             .define_method("nearest", &DistanceMatrix::nearest)
             .define_method("distance", &DistanceMatrix::distance)
             .define_method("knearest", &DistanceMatrix::knearest,
-                           (Arg("j"),
-                            Arg("k") = (uint)(1),
-                            Arg("bound") = (double)(1.0))       )
-            .define_method("predict", &DistanceMatrix::predict);
+                           ( Arg("j"),
+                             Arg("k") = (uint)(1),
+                             Arg("bound") = (double)(1.0))       )
+            .define_method("predict", &DistanceMatrix::predict)
+            .define_method("predict_and_write", &DistanceMatrix::predict_and_write,
+                           ( Arg("j"),
+                             Arg("write_rows") = id_set())     )
+            .define_method("predict_and_write_all", &DistanceMatrix::predict_and_write_all,
+                           ( Arg("write_rows") = id_set())     )
+            ;
 }
 
 

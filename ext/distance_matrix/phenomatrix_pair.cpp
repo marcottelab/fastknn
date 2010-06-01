@@ -9,7 +9,7 @@ id_dist_iter PhenomatrixPair::nearest(uint j) const {
     double min_dist = 100;
     uint min_dist_id = 0;
 
-    id_set s_columns = s.top().column_ids();
+    id_set s_columns = s.back().column_ids();
 
     for (id_set::const_iterator k = s_columns.begin(); k != s_columns.end(); ++k) {
         if (j == *k) continue; // Don't count it when the columns are the same
@@ -27,7 +27,7 @@ id_dist_iter PhenomatrixPair::nearest(uint j) const {
 // This is more of a helper for knearest. It needs to be set up properly in
 // DistanceMatrix.
 void PhenomatrixPair::knearest(proximity_queue& q, const uint& j, const size_t& k, double& kth_so_far, matrix_list::const_iterator this_iter) const {
-    const id_set& columns = s.top().column_ids();
+    const id_set& columns = s.back().column_ids();
 
     uint current_k = 0;
 
