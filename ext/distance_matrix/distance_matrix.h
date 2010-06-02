@@ -1,45 +1,30 @@
 #ifndef DISTANCE_MATRIX_H_
 # define DISTANCE_MATRIX_H_
 
-#include <fstream>
+#include <boost/regex.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <map>
 #include <set>
 #include <algorithm>
 #include <string>
 using std::string;
 using std::set;
-using std::ofstream;
 using std::endl;
 using std::map;
 using std::set_intersection;
+namespace fs = boost::filesystem;
+using fs::ofstream;
 
 typedef std::set<uint> id_set;
 
 #include "phenomatrix_pair.h"
 #include "cparams.h"
 #include "classifier.h"
-//#include "naive_bayes.h"
-// typedef boost::numeric::ublas::mapped_matrix<double> dmatrix_t;
-
-
-//size_t tree_matrix_row_count(conn_t& c, uint id) {
-//    work_t w(c);
-//    return 0;
-//}
-
-
-// Arguments for classifier:
-// - k for knn
-//float (*switch_classifier_function(const std::string& classifier))(size_t) {
-//    std::map<std::string, float(*)(size_t)> choices;
-//    choices["naivebayes"]     = &naivebayes;
-//
-//    return choices[classifier];
-//}
 
 
 class Classifier;
-// class NaiveBayes;
+
 
 class DistanceMatrix {
     friend class Classifier;
@@ -56,6 +41,49 @@ public:
     DistanceMatrix(uint, id_set, string, cparams);
 
     ~DistanceMatrix();
+
+
+    // Native C++ cross-validate function. Probably doesn't add much in terms of
+    // speed to the native Ruby, but wrote it to simplify debugging.
+    void crossvalidate() {
+        map<uint, id_set> child_row_sets = predict_matrix_.child_row_ids();
+
+        // Create crossvalidation subdirectories
+        prepare_filesystem_for_crossvalidation(child_row_sets.size());
+
+        size_t fold_count = 0;
+        for (map<uint, id_set>::const_iterator mt = child_row_sets.begin();
+                mt != child_row_sets.end(); ++mt)
+        {
+            push_mask(mt->second);
+            {   // This scope is only for clarity: The predictions here only happen
+                // to the masked matrices.
+                id_set write_rows(mt->second);
+
+                fs::path dir_name = "predictions" + lexical_cast<string>(fold_count);
+                predict_and_write_all_to(dir_name, write_rows);
+            }
+            pop_mask();
+
+            fold_count++;
+        }
+
+    }
+
+
+    // Removes rows from the matrices on which we're calculating distances.
+    void push_mask(id_set mask_rows) {
+        for (matrix_list::iterator st = source_matrices.begin(); st != source_matrices.end(); ++st)
+            st->push_mask(mask_rows);
+    }
+
+    // Restores removed rows from the matrices on which we're calculating distances.
+    bool pop_mask() {
+        bool res = true;
+        for (matrix_list::iterator st = source_matrices.begin(); st != source_matrices.end(); ++st)
+            res &= st->pop_mask();
+        return res;
+    }
 
     // Find source matrix by columns
     matrix_list::const_iterator find_by_column(uint j) const {
@@ -89,28 +117,42 @@ public:
 
 
     // Predicts for all columns and writes and sorts results
-    set<string> predict_and_write_all(id_set write_rows = id_set()) const {
-        set<string> ret;
+    set<fs::path> predict_and_write_all_to(const fs::path& dir, const id_set& write_rows) const {
+        set<fs::path> ret;
 
         id_set columns = predict_matrix_.column_ids();
         for (id_set::const_iterator jt = columns.begin(); jt != columns.end(); ++jt)
-            ret.insert( predict_and_write(*jt, write_rows) );
+            ret.insert( predict_and_write_to(dir, *jt, write_rows) );
 
         return ret;
     }
 
+    set<fs::path> predict_and_write_all(id_set write_rows = id_set()) const {
+        fs::path dir("predictions");
+        return predict_and_write_all_to(dir, write_rows);
+    }
 
-    // Predicts for a column, sorts, then returns the filename.
-    string predict_and_write(uint j, id_set write_rows = id_set()) const {
+
+    // Write predictions to a file with a specified path. If you don't want to
+    // specify a path, use predict_and_write, or set the first argument to "."
+    fs::path predict_and_write_to(const fs::path& dir, uint j, const id_set& write_rows) const {
         pcolumn predictions = predict(j);
 
         map<float, id_set> sorted_predictions = predict_rows_and_sort(j, write_rows);
 
         // Write to a file named by phenotype ID
-        string filename = lexical_cast<string>(j);
-        write_predictions(filename, sorted_predictions);
+        fs::path filepath = dir / lexical_cast<string>(j);
 
-        return write_predictions(filename, sorted_predictions);
+        write_predictions(filepath, sorted_predictions);
+
+        return filepath;
+    }
+
+
+    // Predicts for a column, sorts, then returns the filename.
+    fs::path predict_and_write(uint j, id_set write_rows = id_set()) const {
+        fs::path dir("predictions");
+        return predict_and_write_to(dir, j, write_rows);
     }
 
 
@@ -188,7 +230,7 @@ public:
         }
 
         // Now include further items equal to kth_so_far
-        while (q.top().distance == kth_so_far) { ret.push(q.top()); q.pop(); }
+        while (!q.empty() && q.top().distance == kth_so_far) { ret.push(q.top()); q.pop(); }
 
         return ret;
     }
@@ -207,52 +249,80 @@ public:
 
 #endif
 protected:
+    // Create a number of predictions directories in which to store output.
+    //
+    // Before creation, old directories matching predictions[0-9]+ will be
+    // deleted.
+    void prepare_filesystem_for_crossvalidation(size_t folds) const {
+        // Delete existing directories matching predictions*
+        delete_old_crossvalidation_filesystem();
+
+        // Create new directories
+        for (size_t f = 0; f < folds; ++f)
+            fs::create_directory("predictions" + lexical_cast<string>(f));
+    }
+
+    // Delete existing directories matching predictions*
+    void delete_old_crossvalidation_filesystem() const {
+        fs::path p(".");
+        boost::regex e("^predictions[0-9]+$");
+        fs::directory_iterator dir_iter(p), dir_end;
+        for (; dir_iter != dir_end; ++dir_iter) {
+            string filename = dir_iter->filename();
+            if (boost::regex_search(filename, e))
+                fs::remove_all(filename);
+        }
+    }
+
     // Predict for column j and only return the specified set of rows, sorted by score followed by ID
     map<float, id_set> predict_rows_and_sort(uint j, const id_set& rows) const {
-        pcolumn predictions = predict(j);
-        map<float, id_set> sorted_predictions;
-
         // Simple case -- no rows specified, print all
         if (rows.size() == 0) return predict_and_sort(j);
+
+        // cerr << "predict_rows_and_sort main, rows.size = " << rows.size() << endl;
+
+        pcolumn predictions = predict(j); // first:gene(uint) second:score(float)
+        map<float, id_set> sorted_predictions;
 
         for (id_set::const_iterator i = rows.begin(); i != rows.end(); ++i) {
             pcolumn::const_iterator f = predictions.find(*i);
             // Sort the predictions by adding to a map of sets
             if (f != predictions.end())
-                sorted_predictions[f->first].insert(f->second);
+                sorted_predictions[f->second].insert(*i);
         }
         return sorted_predictions;
     }
 
     // Predict for column j and sort the results.
     map<float, id_set> predict_and_sort(uint j) const {
-        pcolumn predictions = predict(j);
+        // cerr << "predict_and_sort main" << endl;
+
+        pcolumn predictions = predict(j); // first:gene(uint) second:score(float)
         map<float, id_set> sorted_predictions;
 
         // Sort the predictions by adding to a map of sets
         for (pcolumn::const_iterator i = predictions.begin(); i != predictions.end(); ++i)
-            sorted_predictions[i->first].insert(i->second);
+            sorted_predictions[i->second].insert(i->first);
 
         return sorted_predictions;
     }
     
     // Output a set of sorted predictions.
-    string write_predictions(const string& filename, const map<float, id_set>& sorted_predictions) const {
-        ofstream out( filename.c_str() );
+    void write_predictions(const fs::path& filename, const map<float, id_set>& sorted_predictions) const {
+        ofstream out( filename );
 
         // Print two header lines to conform with old format
         out << "File generated by fastknn rubygem" << endl;
         out << "gene\tscore" << endl;
 
         // Print in sorted order: first by score, then by gene if the score is the same
-        for (map<float,id_set>::const_iterator score_it = sorted_predictions.begin(); score_it != sorted_predictions.end(); ++score_it) {
-            for (id_set::const_iterator gene_it = score_it->second.begin(); gene_it != score_it->second.end(); ++gene_it)
+        for (map<float,id_set>::const_reverse_iterator score_it = sorted_predictions.rbegin(); score_it != sorted_predictions.rend(); ++score_it) {
+            id_set genes = score_it->second;
+            for (id_set::const_iterator gene_it = genes.begin(); gene_it != genes.end(); ++gene_it)
                 out << *gene_it << '\t' << score_it->first << endl;
         }
 
         out.close();
-
-        return filename;
     }
 
 

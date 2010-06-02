@@ -6,6 +6,7 @@ require 'mkmf-rice'
 have_library("stdc++")
 have_library("pqxx")
 have_library("boost_filesystem")
+have_library("boost_regex")
 # have_library("phenomatrix")
 if RUBY_VERSION =~ /1.9/ then
   $CPPFLAGS += " -DRUBY_19"

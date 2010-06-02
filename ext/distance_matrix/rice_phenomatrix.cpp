@@ -6,7 +6,10 @@
             .define_method("id", &PhenomatrixBase::id)
             .define_method("observations_count", &PhenomatrixBase::observations_size)
             .define_method("has_column?", &PhenomatrixBase::has_column)
-            .define_method("row_count", &PhenomatrixBase::row_count);
+            .define_method("row_count", &PhenomatrixBase::row_count)
+            .define_method("child_ids", &PhenomatrixBase::child_ids)
+            .define_method("child_row_ids", &PhenomatrixBase::child_row_ids)
+            ;
 
     Data_Type<Phenomatrix> rb_cPhenomatrix =
             define_class_under<Phenomatrix, PhenomatrixBase>(rb_mFastknn, "Phenomatrix")

@@ -42,7 +42,35 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
   end
 
   def test_predict
-    STDERR.puts "Size of predict(12): #{@@d.predict(12).size}"
+    assert @@d.predict(12).size == 16648
+  end
+
+  def test_push_and_pop_mask
+    @@d.push_mask([675,773,785,2,323,348,351,642,1636,4353,4846])
+    @@d.pop_mask
+
+    @@d.push_mask([1,9, 12, 13, 15, 19, 20, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 34, 35, 36])
+    @@d.pop_mask
+  end
+
+#  def test_predict_and_write
+#    Dir.chdir("tmp/fastknn") do
+#      @@d.predict_and_write(1)
+#      assert `cat 1 |wc -l` =~ /^16650$/
+#      `rm 1`
+#
+#      @@d.predict_and_write_all([1,9,12,13,15,19,20,22,23])
+#      assert `cat 4 |wc -l` =~ /^11$/
+#      `rm *`
+#
+#      @@d.predict_and_write_all
+#      assert `cat 5 |wc -l` =~ /^16650$/
+#      `rm *`
+#    end
+#  end
+
+  def test_crossvalidation
+    Fastknn.crossvalidate 185, 3, "hypergeometric", {:classifier => :naivebayes, :k => 10}
   end
 
 end

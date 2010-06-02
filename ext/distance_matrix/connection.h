@@ -11,11 +11,15 @@
 #include <pqxx/transaction.hxx>
 #include <pqxx/result.hxx>
 
+#include <map>
+#include <utility>
 #include <string>
 #include <set>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
 
+using std::map;
+using std::make_pair;
 using std::cerr;
 using std::endl;
 using boost::shared_ptr;
@@ -80,9 +84,33 @@ public:
     id_set fetch_id_set(const string& sql);
     size_t fetch_id(const string& sql);
 
+    template <typename K, typename V>
+    map<K,V> fetch_map(const string& sql) {
+        work_t w(*c);
+        result_t r = w.exec(sql);
+
+        map<K,V> ret;
+
+        typename map<K,V>::iterator hint(ret.end());
+
+        for (result_t::const_iterator rt = r.begin(); rt != r.end(); ++rt) {
+            K id = 0;
+            V t;
+            (*rt)[0].to(id);
+            (*rt)[1].to(t);
+            if (id != 0)
+                hint = ret.insert(hint,
+                                  make_pair( id, t )
+                                 );
+        }
+
+        return ret;
+    }
+
 private:    
     static conn_t* c;
     static size_t count_;
 };
+
 
 #endif // CONNECTION_H_

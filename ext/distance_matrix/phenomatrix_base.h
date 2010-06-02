@@ -7,8 +7,9 @@ typedef unsigned int uint;
 # include <rice/Data_Type.hpp>
 # include <rice/Constructor.hpp>
 #endif
-
+#include <map>
 #include <iostream>
+using std::map;
 //#include <boost/numeric/ublas/matrix_sparse.hpp>
 
 #include "connection.h"
@@ -36,7 +37,7 @@ public:
     //
     // At some point, it should be revised to accept a Ruby on Rails connection.
     PhenomatrixBase(uint id, bool is_base_class = true)
-    : id_(id), type_("Matrix"), obs(NULL)
+    : id_(id), child_ids_(fetch_child_ids()), type_("Matrix"), obs(NULL)
     {
         base_construct(is_base_class);
     }
@@ -49,6 +50,7 @@ public:
       column_ids_(rhs.column_ids_),
       root_id_(rhs.root_id_),
       parent_id_(rhs.parent_id_),
+      child_ids_(rhs.child_ids_),
       type_(rhs.type_),
       obs(new omatrix(*(rhs.obs)))
     {
@@ -62,6 +64,7 @@ public:
       column_ids_(rhs.column_ids_),
       root_id_(rhs.root_id_),
       parent_id_(rhs.parent_id_),
+      child_ids_(rhs.child_ids_), // not safe to use!
       type_(rhs.type_),
       obs(new omatrix(column_ids_.size()))
     {
@@ -174,6 +177,20 @@ public:
     //bool has_observation(uint i, uint j) const {
     //    return ((*obs)[j].find(i));
     //}
+
+
+    // This function returns the ids for the matrix's children. To get those
+    // IDs requires a database fetch -- it is not pre-cached on load.
+    id_set child_ids() const {
+        id_set cids;
+        for (map<uint,string>::const_iterator i = child_ids_.begin(); i != child_ids_.end(); ++i)
+            cids.insert(i->first);
+        return cids;
+    }
+
+    std::map<uint, id_set> child_row_ids() const {
+        return fetch_child_row_ids();
+    }
     
 protected:
     // Surrogate constructor, called by both default constructors, but not the
@@ -212,11 +229,36 @@ protected:
 
     // There are other ways to arrange these two functions, but only this one appears
     // to work with Rice.
-    string fetch_matrix_type(uint matrix_id) {
+    string fetch_matrix_type(uint matrix_id) const {
         return Connection::instance().fetch_type("matrices", matrix_id);
     }
-    string fetch_matrix_type() {
+    
+    string fetch_matrix_type() const {
         return Connection::instance().fetch_type("matrices", id_);
+    }
+
+    map<uint,string> fetch_child_ids(uint matrix_id) const {
+        return Connection::instance().fetch_map<uint,string>(child_ids_sql(matrix_id));
+    }
+    
+    map<uint,string> fetch_child_ids() const {
+        return Connection::instance().fetch_map<uint,string>(child_ids_sql(id_));
+    }
+
+    // Same as fetch_child_row_ids, but treats the child as a node instead of a leaf.
+    id_set fetch_node_row_ids(uint matrix_id, uint child_matrix_id) const {
+        return Connection::instance().fetch_id_set(node_row_ids_sql(matrix_id, child_matrix_id));
+    }
+
+    std::map<uint, id_set> fetch_child_row_ids() const {
+        std::map<uint,id_set> child_to_row_ids;
+        for (map<uint,string>::const_iterator ct = child_ids_.begin(); ct != child_ids_.end(); ++ct) {
+            if (ct->second == "LeafMatrix")
+                child_to_row_ids[ct->first] = fetch_row_ids(ct->first);
+            else
+                child_to_row_ids[ct->first] = fetch_node_row_ids(id_, ct->first);
+        }
+        return child_to_row_ids;
     }
 
 
@@ -231,6 +273,17 @@ protected:
     }
     virtual string row_ids_sql(uint matrix_id) const {
         return "SELECT DISTINCT i FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + " ORDER BY i;";
+    }
+
+    // THESE ARE NOT DESIGNED TO ACCOUNT FOR source matrices in the same way as row_ids_sql
+    // (which is overridden in phenomatrix.h)
+    virtual string node_row_ids_sql(uint matrix_id, uint node_matrix_id) const {
+        return "SELECT DISTINCT e1.i FROM entries e1 WHERE e1.matrix_id = " + lexical_cast<string>(matrix_id) +
+               " EXCEPT SELECT e2.i FROM entries e2 WHERE e2.matrix_id = " + lexical_cast<string>(node_matrix_id) +
+               " ORDER BY i;";
+    }
+    virtual string child_ids_sql(uint matrix_id) const {
+        return "SELECT DISTINCT id, type FROM matrices WHERE parent_id = " + lexical_cast<string>(matrix_id) + " ORDER BY id;";
     }
 
 
@@ -360,6 +413,7 @@ protected:
     id_set column_ids_;
     uint root_id_;
     uint parent_id_;
+    map<uint,string> child_ids_;
     string type_;
 
     omatrix* obs; // set of observations indexed by column

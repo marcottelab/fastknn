@@ -47,32 +47,3 @@ void PhenomatrixPair::knearest(proximity_queue& q, const uint& j, const size_t& 
     }
 }
 
-
-#ifdef RICE
-
-using namespace Rice;
-
-
-extern "C"
-void Init_phenomatrix() {
-
-    Rice::Module rb_mFastknn = define_module("Fastknn");
-
-    #include "rice_connection.cpp"
-    #include "rice_phenomatrix.cpp"
-
-}
-#else
-int main() {
-    PhenomatrixPair p(185, 3, "hypergeometric");
-    return 0;
-}
-#endif
-
-//#ifndef DISTANCE_MATRIX_H_
-//int main() {
-//    Phenomatrix p("dbname=crossval_development user=jwoods password=youwish1", 185);
-//    return 0;
-//}
-//#endif
-

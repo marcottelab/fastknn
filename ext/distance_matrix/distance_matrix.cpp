@@ -72,15 +72,36 @@ Object to_ruby<id_set>(id_set const & d) {
 }
 
 
-
 // Convert from Rice::Array to std::set
 template <>
-id_set from_ruby<id_set >(Object x) {
+id_set from_ruby<id_set>(Object x) {
     Array ary(x);
     id_set result;
     for (Array::iterator i = ary.begin(); i != ary.end(); ++i)
         result.insert(from_ruby<uint>(*i));
     return result;
+}
+
+template <>
+Rice::Object to_ruby<fs::path>(fs::path const & d) {
+    String s(d.string());
+    return s;
+}
+
+template<>
+Rice::Object to_ruby<map<uint, id_set> >(map<uint,id_set> const & d) {
+    Hash h;
+    for (map<uint,id_set>::const_iterator dt = d.begin(); dt != d.end(); ++dt)
+        h[ to_ruby<uint>(dt->first) ] = to_ruby<id_set>(dt->second);
+    return h;
+}
+
+template <>
+Rice::Object to_ruby<set<fs::path> >(set<fs::path> const & d) {
+    Array ary;
+    for (set<fs::path>::const_iterator dt = d.begin(); dt != d.end(); ++dt)
+        ary.push( to_ruby<fs::path>(*dt) );
+    return ary;
 }
 
 
@@ -155,13 +176,20 @@ void Init_distance_matrix() {
             .define_method("knearest", &DistanceMatrix::knearest,
                            ( Arg("j"),
                              Arg("k") = (uint)(1),
-                             Arg("bound") = (double)(1.0))       )
+                             Arg("bound") = (double)(1.0))     )
             .define_method("predict", &DistanceMatrix::predict)
             .define_method("predict_and_write", &DistanceMatrix::predict_and_write,
                            ( Arg("j"),
                              Arg("write_rows") = id_set())     )
             .define_method("predict_and_write_all", &DistanceMatrix::predict_and_write_all,
                            ( Arg("write_rows") = id_set())     )
+            .define_method("predict_and_write_to", &DistanceMatrix::predict_and_write_to,
+                           ( Arg("dir"),
+                             Arg("j"),
+                             Arg("write_rows"))                )
+            .define_method("push_mask", &DistanceMatrix::push_mask)
+            .define_method("pop_mask", &DistanceMatrix::pop_mask)
+            .define_method("crossvalidate", &DistanceMatrix::crossvalidate)
             ;
 }
 
@@ -169,9 +197,13 @@ void Init_distance_matrix() {
 #else
 
 int main() {
+    Connection c;
+    c.connect("dbname=crossval_development user=jwoods password=youwish1");
+
     id_set sources; sources.insert(3);
     cparams cp("naivebayes"); cp.k = 10;
     DistanceMatrix d(185, sources, "hypergeometric", cp);
+    d.crossvalidate();
     return 0;
 }
 
