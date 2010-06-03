@@ -69,8 +69,8 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
 #    end
 #  end
 
-  def test_crossvalidation
-    Fastknn.crossvalidate 185, 3, "hypergeometric", {:classifier => :naivebayes, :k => 10}
-  end
+#  def test_crossvalidation
+#    Fastknn.crossvalidate 185, 3, "hypergeometric", {:classifier => :naivebayes, :k => 10}
+#  end
 
 end

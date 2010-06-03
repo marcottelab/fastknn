@@ -23,6 +23,8 @@ DistanceMatrix::DistanceMatrix(
 void DistanceMatrix::construct_classifier(const cparams& classifier_params) {
     if (classifier_params.classifier == "naivebayes")
         classifier = new NaiveBayes(this, classifier_params.k);
+    else if (classifier_params.classifier == "simple")
+        classifier = new SimpleClassifier(this);
     else {
         string err = "distance_matrix.o: Unrecognized classifier '" + classifier_params.classifier + "'!";
 #ifdef RICE

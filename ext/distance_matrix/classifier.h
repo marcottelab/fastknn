@@ -27,7 +27,7 @@ public:
     }
 protected:
     // This is the function that needs to be overridden by other types of classifiers.
-    virtual void predict_column(pcolumn& ret, uint j) const;
+    virtual void predict_column(pcolumn& ret, uint j) const = 0;
 
     list<Phenomatrix>::const_reverse_iterator predict_from(matrix_list::const_iterator source_pair) const {
         // If there is only one element, there is only one thing to predict.
@@ -54,15 +54,21 @@ protected:
 };
 
 
+class SimpleClassifier : public Classifier {
+public:
+    SimpleClassifier(const DistanceMatrix* const rhs);
+    virtual ~SimpleClassifier() { }
+protected:
+    virtual void predict_column(pcolumn& ret, uint j) const;
+};
+
+
 class NaiveBayes : public Classifier {
 public:
     NaiveBayes(const DistanceMatrix* const rhs, size_t k_);
-
     virtual ~NaiveBayes() { }
-
 protected:
     virtual void predict_column(pcolumn& ret, uint j) const;
-
     size_t k;
 };
 
