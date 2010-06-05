@@ -3,6 +3,7 @@
 
 #include <stack>
 #include <list>
+#include <boost/foreach.hpp>
 using std::list;
 using std::stack;
 
@@ -33,13 +34,13 @@ class PhenomatrixPair {
 public:
     PhenomatrixPair(uint id, uint given_id, const string& distance_fn)
     : p(create_phenomatrix_stack(id, given_id)),      // predict species matrix
-      s(create_phenomatrix_list(given_id, given_id)), // source species matrix
+      s(create_phenomatrix_list(given_id)), // source species matrix
       distance_function(switch_distance_function(distance_fn))
     { }
 
     PhenomatrixPair(const string& dbstr, uint id, uint given_id, const string& distance_fn)
     : p(create_phenomatrix_stack(id, given_id)),
-      s(create_phenomatrix_list(given_id, given_id)),
+      s(create_phenomatrix_list(given_id)),
       distance_function(switch_distance_function(distance_fn))
     { }
 
@@ -141,8 +142,8 @@ protected:
         return new_stack;
     }
 
-    static list<Phenomatrix> create_phenomatrix_list(uint id, uint given_id) {
-        list<Phenomatrix> new_list; new_list.push_back(Phenomatrix(id, given_id));
+    static list<Phenomatrix> create_phenomatrix_list(uint id) {
+        list<Phenomatrix> new_list; new_list.push_back(PhenomatrixBase(id));
         return new_list;
     }
 

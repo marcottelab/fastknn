@@ -10,6 +10,11 @@ using std::string;
 using std::ostringstream;
 
 
+id_set extract_matrix_ids(const matrix_list& matrices);
+id_set extract_row_ids(const matrix_list& matrix_pairs);
+id_set extract_column_ids(const matrix_list& matrix_pairs);
+
+
 class FusionPhenomatrix : public PhenomatrixBase {
 public:
     FusionPhenomatrix(uint id, id_set given_ids)
@@ -19,6 +24,8 @@ public:
         if (given_ids.size() > 1 || *(given_ids.begin()) != id)
             inherit_construct();
     }
+
+    FusionPhenomatrix(uint id, const matrix_list& given_matrices);
 
     FusionPhenomatrix(const FusionPhenomatrix& rhs)
     : PhenomatrixBase(rhs), given_ids_(rhs.given_ids_)
@@ -53,8 +60,7 @@ protected:
         sql   << "SELECT COUNT(DISTINCT e.i) FROM entries e " << endl
               << "INNER JOIN entries es ON (e.i = es.i) " << endl
               << "WHERE e.matrix_id = " << matrix_id << endl
-              << " AND es.matrix_id IN (" << join(given_ids_, ",") << ")" << endl
-              << " AND  e.type = 'Cell';" << endl;
+              << " AND es.matrix_id IN (" << join(given_ids_, ",") << ");" << endl;
 
         return sql.str();
     }
@@ -64,8 +70,7 @@ protected:
         sql   << "SELECT DISTINCT e.i FROM entries e " << endl
               << "INNER JOIN entries es ON (e.i = es.i) " << endl
               << "WHERE e.matrix_id = " << matrix_id << endl
-              << " AND es.matrix_id IN (" << join(given_ids_, ",") << ")" << endl
-              << " AND  e.type = 'Cell';" << endl;
+              << " AND es.matrix_id IN (" << join(given_ids_, ",") << ") ORDER BY e.i;" << endl;
 
         return sql.str();
     }
@@ -76,7 +81,7 @@ protected:
               << "INNER JOIN entries es ON (e.i = es.i) " << endl
               << "WHERE e.matrix_id = " << matrix_id << endl
               << " AND es.matrix_id IN (" << join(given_ids_, ",") << ")" << endl
-              << " AND  e.type = 'Cell';" << endl;
+              << " AND  e.type = 'Cell' order by e.j;" << endl;
 
         return sql.str();
     }

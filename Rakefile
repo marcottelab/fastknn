@@ -29,6 +29,7 @@ Fastknn is a C++-implemented Ruby module for k-nearest neighbors
 analyses, providing for multi-stage cross-validation.
 EOF
 end
+spec.add_development_dependency('test_benchmark')
 
 Rake::GemPackageTask.new(spec) do |pkg|
   pkg.need_tar = true
@@ -39,6 +40,12 @@ Rake::ExtensionTask.new('distance_matrix')
 namespace :test do
 Rake::TestTask.new(:phenomatrix) do |t|
   t.test_files = FileList['test/test_phenomatrix_extn.rb']
+  t.warning = true
+  t.verbose = true
+end
+
+Rake::TestTask.new(:fusion_phenomatrix) do |t|
+  t.test_files = FileList['test/test_fusion_phenomatrix_extn.rb']
   t.warning = true
   t.verbose = true
 end

@@ -17,16 +17,16 @@ class TestPhenomatrixExtn < Test::Unit::TestCase
     assert true
   end
   
+  def test_row_count
+    assert @@pp.row_count == 16648
+    assert @@pb.row_count == 16648
+    assert @@p.row_count == 15570
+  end
+
   def test_parent_and_root_id
     @@p193 ||= Fastknn::PhenomatrixBase.new(199)
     assert @@p193.parent_id == 193
     assert @@p.root_id == 185
-  end
-
-  def test_successful_database_load
-    assert @@p.row_count > 0
-    assert @@pp.row_count > 0
-    assert @@pb.row_count > 0
   end
 
   # If we use dest = source, row count should be exactly the same. So should everything.
@@ -55,11 +55,11 @@ class TestPhenomatrixExtn < Test::Unit::TestCase
   def test_child_row_ids
     child_row_ids = @@pp.child_row_ids
     assert child_row_ids.size == 5
-    assert child_row_ids[193].size == 13318
-    assert child_row_ids[194].size == 13318
-    assert child_row_ids[195].size == 13318
-    assert child_row_ids[196].size == 13319
-    assert child_row_ids[197].size == 13319
+    assert child_row_ids[193].size == 3330
+    assert child_row_ids[194].size == 3330
+    assert child_row_ids[195].size == 3330
+    assert child_row_ids[196].size == 3329
+    assert child_row_ids[197].size == 3329
   end
 
 end

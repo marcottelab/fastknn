@@ -200,10 +200,13 @@ protected:
         
         load_matrix();
     }
-    
 
     void add_observation(uint i, uint j) {
         obs[j].insert(i);
+    }
+
+    void add_observations(id_set i_set, uint j) {
+        obs[j] = i_set;
     }
 
     void remove_observation(uint i, uint j) {
@@ -230,17 +233,20 @@ protected:
     }
 
     // Same as fetch_child_row_ids, but treats the child as a node instead of a leaf.
-    id_set fetch_node_row_ids(uint matrix_id, uint child_matrix_id) const {
-        return Connection::instance().fetch_id_set(node_row_ids_sql(matrix_id, child_matrix_id));
+    id_set fetch_node_as_leaf_row_ids(uint matrix_id, uint child_matrix_id) const {
+        return Connection::instance().fetch_id_set(node_as_leaf_row_ids_sql(matrix_id, child_matrix_id));
+    }
+    id_set fetch_leaf_row_ids(uint of_id) const {
+        return Connection::instance().fetch_id_set(leaf_row_ids_sql(of_id));
     }
 
     std::map<uint, id_set> fetch_child_row_ids() const {
         std::map<uint,id_set> child_to_row_ids;
         for (map<uint,string>::const_iterator ct = child_ids_.begin(); ct != child_ids_.end(); ++ct) {
             if (ct->second == "LeafMatrix")
-                child_to_row_ids[ct->first] = fetch_row_ids(ct->first);
+                child_to_row_ids[ct->first] = fetch_leaf_row_ids(ct->first);
             else
-                child_to_row_ids[ct->first] = fetch_node_row_ids(id_, ct->first);
+                child_to_row_ids[ct->first] = fetch_node_as_leaf_row_ids(id_, ct->first);
         }
         return child_to_row_ids;
     }
@@ -250,13 +256,13 @@ protected:
 #ifdef DEBUG_TRACE_INHERITED_CONSTRUCTION
         cerr << "phenomatrix_base.h: load_matrix_sql" << endl;
 #endif
-        return "SELECT DISTINCT i,j FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + " AND type = 'Cell';";
+        return "SELECT DISTINCT i,j FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + " AND type = 'Cell' ORDER BY j, i;";
     }
     virtual string row_count_sql(uint matrix_id) const {
         return "SELECT COUNT(DISTINCT i) FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + ";";
     }
     virtual string row_ids_sql(uint matrix_id) const {
-        return "SELECT DISTINCT i FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + " ORDER BY i;";
+        return leaf_row_ids_sql(matrix_id);
     }
     virtual string column_count_sql(uint matrix_id) const {
         return "SELECT COUNT(DISTINCT j) FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + ";";
@@ -265,9 +271,13 @@ protected:
         return "SELECT DISTINCT j FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + " ORDER BY j;";
     }
 
+    virtual string leaf_row_ids_sql(uint matrix_id) const {
+        return "SELECT DISTINCT i FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + " ORDER BY i;";
+    }
+
     // THESE ARE NOT DESIGNED TO ACCOUNT FOR source matrices in the same way as row_ids_sql
     // (which is overridden in phenomatrix.h)
-    virtual string node_row_ids_sql(uint matrix_id, uint node_matrix_id) const {
+    virtual string node_as_leaf_row_ids_sql(uint matrix_id, uint node_matrix_id) const {
         return "SELECT DISTINCT e1.i FROM entries e1 WHERE e1.matrix_id = " + lexical_cast<string>(matrix_id) +
                " EXCEPT SELECT e2.i FROM entries e2 WHERE e2.matrix_id = " + lexical_cast<string>(node_matrix_id) +
                " ORDER BY i;";
@@ -296,13 +306,43 @@ protected:
 #endif
         }
 
-        for (result_t::const_iterator rt = r.begin(); rt != r.end(); ++rt) {
+        
+        id_set set_of_i_for_this_j;
+        result_t::const_iterator rt = r.begin();
+        if (rt == r.end()) {
+            string err = "phenomatrix_base.h: load_matrix: Empty matrix!";
+#ifdef RICE
+            throw Rice::Exception(rb_eArgError, err.c_str());
+#else
+            cerr << err << endl;
+            throw;
+#endif
+        }
+        
+        uint this_j = 0;
+        (*rt)[0].to(this_j);
+        id_set::iterator insert_hint;
+
+        while (rt != r.end()) {
             uint i = 0, j = 0;
             (*rt)[0].to(i);
             (*rt)[1].to(j);
 
-            add_observation(i, j);
+            // Any time we get to a
+            if (this_j != j) {
+                add_observations(set_of_i_for_this_j, this_j);
+                set_of_i_for_this_j.clear();
+
+                // Prepare to insert the next j's i-values
+                insert_hint = set_of_i_for_this_j.begin();
+                this_j = j;
+            }
+            insert_hint = set_of_i_for_this_j.insert(insert_hint, i);
+            ++rt;
         }
+
+        if (set_of_i_for_this_j.size() > 0)
+            add_observations(set_of_i_for_this_j, this_j);
 
         delete w;
     }

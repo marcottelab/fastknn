@@ -22,6 +22,7 @@ $objs = [
   "phenomatrix_pair.o",
   "connection.o",
   "id_dist.o",
-  "naive_bayes.o"]
+  "naive_bayes.o",
+  "fusion_phenomatrix.o"]
 
 create_makefile('distance_matrix')

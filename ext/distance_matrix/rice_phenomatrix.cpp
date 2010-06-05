@@ -7,6 +7,8 @@
             .define_method("observations_count", &PhenomatrixBase::observations_size)
             .define_method("has_column?", &PhenomatrixBase::has_column)
             .define_method("row_count", &PhenomatrixBase::row_count)
+            .define_method("row_ids", &PhenomatrixBase::row_ids)
+            .define_method("column_ids", &PhenomatrixBase::column_ids)
             .define_method("child_ids", &PhenomatrixBase::child_ids)
             .define_method("child_row_ids", &PhenomatrixBase::child_row_ids)
             ;

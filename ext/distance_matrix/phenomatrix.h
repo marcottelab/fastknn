@@ -51,7 +51,7 @@ protected:
                "INNER JOIN entries e2 ON (e1.i = e2.i) \n" +
                "WHERE e1.matrix_id = " + lexical_cast<string>(matrix_id) + " \n" +
                " AND  e2.matrix_id = " + lexical_cast<string>(given_id_) + " \n" +
-               " AND  e1.type = 'Cell';";
+               " AND  e1.type = 'Cell' ORDER BY e1.j, e1.i;";
     }
 
     string row_count_sql(uint matrix_id) const {
@@ -65,14 +65,14 @@ protected:
         return string("SELECT DISTINCT e1.i FROM entries e1 \n") +
                "INNER JOIN entries e2 ON (e1.i = e2.i) \n" +
                "WHERE e1.matrix_id = " + lexical_cast<string>(matrix_id) + " \n" +
-               " AND  e2.matrix_id = " + lexical_cast<string>(given_id_) + ";";
+               " AND  e2.matrix_id = " + lexical_cast<string>(given_id_) + " ORDER BY e1.i;";
     }
 
     string column_ids_sql(uint matrix_id) const {
         return string("SELECT DISTINCT e1.j FROM entries e1 \n") +
                "INNER JOIN entries e2 ON (e1.i = e2.i) \n" +
                "WHERE e1.matrix_id = " + lexical_cast<string>(matrix_id) + " \n" +
-               " AND  e2.matrix_id = " + lexical_cast<string>(given_id_) + ";";
+               " AND  e2.matrix_id = " + lexical_cast<string>(given_id_) + " ORDER BY e1.j;";
     }
 
     string column_count_sql(uint matrix_id) const {
