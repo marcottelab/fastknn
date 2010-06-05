@@ -17,7 +17,12 @@
 #include <set>
 #include <iostream>
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/foreach.hpp>
+#include <list>
 
+
+using std::list;
 using std::map;
 using std::make_pair;
 using std::cerr;
@@ -30,6 +35,8 @@ typedef pqxx::connection conn_t;
 typedef pqxx::work work_t;
 typedef std::set<uint> id_set;
 
+
+string join(const id_set& ids, const string& join_str);
 
 class Connection {
 public:

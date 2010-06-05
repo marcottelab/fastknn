@@ -7,7 +7,17 @@ require "fastknn"
 
 class TestDistanceMatrixExtn < Test::Unit::TestCase
   def setup
+    # Predicting human
     @@d ||= Fastknn::DistanceMatrix.new(185, [3], "hypergeometric", {:classifier => :naivebayes, :k => 10})
+    
+    # Predicting plant
+    @@dat ||= Fastknn::DistanceMatrix.new(247, [253,257], "hypergeometric", {:classifier => :naivebayes, :k => 10})
+
+    @@predict_matrix ||= Fastknn::Phenomatrix.new(247,247)
+    @@source_matrices ||= @@dat.source_matrix_pairs
+    @@masks ||= @@predict_matrix.child_row_ids
+    @@first_mask ||= @@masks[264]
+    @@second_mask ||= @@masks[259]
   end
 
   def test_truth
@@ -46,11 +56,18 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
   end
 
   def test_push_and_pop_mask
-    @@d.push_mask([675,773,785,2,323,348,351,642,1636,4353,4846])
-    @@d.pop_mask
-
-    @@d.push_mask([1,9, 12, 13, 15, 19, 20, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 34, 35, 36])
-    @@d.pop_mask
+    assert @@dat.predict_matrix_has_column?(9831) == true
+    assert @@dat.predict_matrix_has_column?(9854) == false
+    @@dat.push_mask @@first_mask
+    assert @@dat.predict_matrix_has_column?(9831) == true
+    assert @@dat.predict_matrix_has_column?(9854) == false
+    @@dat.pop_mask
+    assert @@dat.predict_matrix_has_column?(9831) == true
+    assert @@dat.predict_matrix_has_column?(9854) == false
+    @@dat.push_mask @@second_mask
+    assert @@dat.predict_matrix_has_column?(9831) == true
+    assert @@dat.predict_matrix_has_column?(9854) == false
+    @@dat.pop_mask
   end
 
 #  def test_predict_and_write

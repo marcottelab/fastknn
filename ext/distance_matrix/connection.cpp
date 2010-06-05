@@ -1,5 +1,14 @@
 #include "connection.h"
 
+string join(const id_set& ids, const string& join_str) {
+    list<string> str_ids;
+    BOOST_FOREACH( uint id, ids )
+    {
+        str_ids.push_back(lexical_cast<string>(id));
+    }
+    return boost::algorithm::join(str_ids, join_str);
+}
+
 // Fetches an unsigned integer type (like a count) which will never be nil.
 uint Connection::fetch_count(const string& sql) {
     work_t w(*c);

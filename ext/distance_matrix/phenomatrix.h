@@ -37,6 +37,8 @@ public:
     : PhenomatrixBase(rhs, mask_rows), given_id_(rhs.given_id_)
     { }
 
+    ~Phenomatrix() { }
+
     // Get the source matrix id
     uint source_id() const { return given_id_; }
 protected:
@@ -61,6 +63,20 @@ protected:
 
     string row_ids_sql(uint matrix_id) const {
         return string("SELECT DISTINCT e1.i FROM entries e1 \n") +
+               "INNER JOIN entries e2 ON (e1.i = e2.i) \n" +
+               "WHERE e1.matrix_id = " + lexical_cast<string>(matrix_id) + " \n" +
+               " AND  e2.matrix_id = " + lexical_cast<string>(given_id_) + ";";
+    }
+
+    string column_ids_sql(uint matrix_id) const {
+        return string("SELECT DISTINCT e1.j FROM entries e1 \n") +
+               "INNER JOIN entries e2 ON (e1.i = e2.i) \n" +
+               "WHERE e1.matrix_id = " + lexical_cast<string>(matrix_id) + " \n" +
+               " AND  e2.matrix_id = " + lexical_cast<string>(given_id_) + ";";
+    }
+
+    string column_count_sql(uint matrix_id) const {
+        return string("SELECT COUNT(DISTINCT e1.j) FROM entries e1 \n") +
                "INNER JOIN entries e2 ON (e1.i = e2.i) \n" +
                "WHERE e1.matrix_id = " + lexical_cast<string>(matrix_id) + " \n" +
                " AND  e2.matrix_id = " + lexical_cast<string>(given_id_) + ";";

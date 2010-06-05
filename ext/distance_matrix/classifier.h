@@ -25,6 +25,9 @@ public:
 
         return ret;
     }
+private:
+    Classifier(const Classifier& rhs) {}
+
 protected:
     // This is the function that needs to be overridden by other types of classifiers.
     virtual void predict_column(pcolumn& ret, uint j) const = 0;

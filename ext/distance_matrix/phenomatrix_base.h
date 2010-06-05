@@ -37,7 +37,7 @@ public:
     //
     // At some point, it should be revised to accept a Ruby on Rails connection.
     PhenomatrixBase(uint id, bool is_base_class = true)
-    : id_(id), child_ids_(fetch_child_ids()), type_("Matrix"), obs(NULL)
+    : id_(id), child_ids_(fetch_child_ids()), type_("Matrix")
     {
         base_construct(is_base_class);
     }
@@ -52,8 +52,8 @@ public:
       parent_id_(rhs.parent_id_),
       child_ids_(rhs.child_ids_),
       type_(rhs.type_),
-      obs(new omatrix(*(rhs.obs)))
-    {
+      obs(copy_construct_omatrix(rhs))
+    {        
 #ifdef DEBUG_TRACE_COPY
         cerr << "phenomatrix_base.h: Copy constructor called! id = " << id_ << endl;
 #endif
@@ -61,34 +61,20 @@ public:
 
     PhenomatrixBase(const PhenomatrixBase& rhs, const id_set& remove_rows)
     : id_(rhs.id_),
+      row_ids_(copy_construct_row_ids(rhs, remove_rows)),
       column_ids_(rhs.column_ids_),
       root_id_(rhs.root_id_),
       parent_id_(rhs.parent_id_),
       child_ids_(rhs.child_ids_), // not safe to use!
       type_(rhs.type_),
-      obs(new omatrix(column_ids_.size()))
+      obs(copy_construct_omatrix(rhs, remove_rows))
     {
 #ifdef DEBUG_TRACE_COPY
         cerr << "phenomatrix_base.h: Copy constructor with mask called! id = " << id_ << endl;
 #endif
-
-        // Remove rows from row_ids list
-        set_difference(rhs.row_ids_.begin(), rhs.row_ids_.end(),
-                       remove_rows.begin(), remove_rows.end(),
-                       std::insert_iterator<id_set>(row_ids_, row_ids_.begin()));
-
-        // Remove rows from each column
-        for (id_set::const_iterator c = column_ids_.begin(); c != column_ids_.end(); ++c) {
-            // Copy the sets with certain things removed.
-            set_difference((*(rhs.obs))[*c].begin(), (*(rhs.obs))[*c].end(),
-                           remove_rows.begin(), remove_rows.end(),
-                           std::insert_iterator<id_set>((*obs)[*c], (*obs)[*c].begin()));
-        }
     }
 
-    virtual ~PhenomatrixBase() {
-        if (obs) delete obs;
-    }
+    virtual ~PhenomatrixBase() { }
 
 #ifdef RICE
     Rice::Object rb_root_id() const {
@@ -110,7 +96,7 @@ public:
 
     // Returns the number of columns in the fully-loaded matrix -- may be different
     // than expected if this is a mask.
-    size_t column_count() const { return obs->size(); }
+    size_t column_count() const { return obs.size(); }
 
 
     uint id() const { return id_; }
@@ -123,20 +109,18 @@ public:
 
     // Get column
     id_set observations(uint j) const {
-        omatrix::const_iterator jt = obs->find(j);
-        if (jt == obs->end()) {
-            cerr << "phenomatrix_base.h: observations(1): Requested non-existent column " << j << " on matrix " << id_ << endl;
-            if (j == 0) throw;
+        omatrix::const_iterator jt = obs.find(j);
+        if (jt == obs.end()) {
 
 #ifdef DEBUG_TRACE_DISTANCE
             // TEST CODE
             cerr << "Matrix is " << id() << endl;
-            for (omatrix::const_iterator k = obs->begin(); k != obs->end(); ++k)
+            for (omatrix::const_iterator k = obs.begin(); k != obs.end(); ++k)
                 cerr << k->first << ", " << std::flush;
             cerr << endl;
             // END TEST CODE
 #endif
-            string err = "phenomatrix_base.h: observations(1): Requested non-existent column " + lexical_cast<string>(j) + " on matrix " + lexical_cast<string>(id_);
+            string err = "phenomatrix_base.h: observations: Requested non-existent column " + lexical_cast<string>(j) + " on matrix " + lexical_cast<string>(id_);
 #ifdef RICE
             throw Rice::Exception(rb_eArgError, err.c_str());
 #else
@@ -154,8 +138,8 @@ public:
 
     // Determine whether there's an observation at gene i, phene j
     bool operator()(uint i, uint j) const {
-        omatrix::const_iterator jt = obs->find(j);
-        return (jt == obs->end()) ? false : (jt->second.find(i) != jt->second.end());
+        omatrix::const_iterator jt = obs.find(j);
+        return (jt == obs.end()) ? false : (jt->second.find(i) != jt->second.end());
     }
 
     // Return the column identifiers
@@ -165,9 +149,9 @@ public:
 
     bool has_column(uint j) const {
 #ifdef DEBUG_TRACE_DISTANCE
-	cerr << "phenomatrix.h: has_column: on matrix " << id_ << ", requested col " << j << " and result will be " << (obs->find(j) != obs->end()) << endl;
+	cerr << "phenomatrix.h: has_column: on matrix " << id_ << ", requested col " << j << " and result will be " << (obs.find(j) != obs.end()) << endl;
 #endif
-        return (obs->find(j) != obs->end());
+        return (obs.find(j) != obs.end());
     }
 
     bool has_row(uint i) const {
@@ -212,18 +196,18 @@ protected:
         column_ids_ = fetch_column_ids();
 
         // Create the observation matrix
-        obs = new omatrix(column_ids_.size());
-
+        obs = omatrix(column_ids_.size());
+        
         load_matrix();
     }
     
 
     void add_observation(uint i, uint j) {
-        (*obs)[j].insert(i);
+        obs[j].insert(i);
     }
 
     void remove_observation(uint i, uint j) {
-        (*obs)[j].erase(i);
+        obs[j].erase(i);
     }
 
 
@@ -273,6 +257,12 @@ protected:
     }
     virtual string row_ids_sql(uint matrix_id) const {
         return "SELECT DISTINCT i FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + " ORDER BY i;";
+    }
+    virtual string column_count_sql(uint matrix_id) const {
+        return "SELECT COUNT(DISTINCT j) FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + ";";
+    }
+    virtual string column_ids_sql(uint matrix_id) const {
+        return "SELECT DISTINCT j FROM entries WHERE matrix_id = " + lexical_cast<string>(matrix_id) + " ORDER BY j;";
     }
 
     // THESE ARE NOT DESIGNED TO ACCOUNT FOR source matrices in the same way as row_ids_sql
@@ -362,11 +352,11 @@ protected:
     size_t fetch_row_count() const { return fetch_row_count(id_); } // default arg
 
     size_t fetch_column_count(uint of_id) const {
-        return Connection::instance().fetch_count("SELECT COUNT(DISTINCT j) FROM entries WHERE matrix_id = " + lexical_cast<string>(of_id) + ";");
+        return Connection::instance().fetch_count(column_count_sql(of_id));
     }
 
     id_set fetch_column_ids(uint of_id) const {
-        return Connection::instance().fetch_id_set("SELECT DISTINCT j FROM entries WHERE matrix_id = " + lexical_cast<string>(of_id) + " ORDER BY j;");
+        return Connection::instance().fetch_id_set(column_ids_sql(of_id));
     }
     id_set fetch_column_ids() const { return fetch_column_ids(id_); }
 
@@ -407,6 +397,41 @@ protected:
     }
 
 
+    // COPY CONSTRUCTION HELPERS
+    static omatrix copy_construct_omatrix(const PhenomatrixBase& rhs) { //HERE
+        return omatrix(rhs.obs);
+    }
+
+    static omatrix copy_construct_omatrix(const PhenomatrixBase& rhs, const id_set& remove_rows) {
+        omatrix lhs(rhs.column_ids_.size());
+
+        // Remove rows from each column
+        for (id_set::const_iterator c = rhs.column_ids_.begin(); c != rhs.column_ids_.end(); ++c) {
+            id_set rhs_col = rhs.obs.find(*c)->second;
+            lhs[*c] = remove_from_column(rhs_col, remove_rows);
+        }
+        return lhs;
+    }
+
+    static id_set remove_from_column(const id_set& rhs_col, const id_set& remove_rows) {
+        id_set lhs_col;
+        // Copy the sets with certain things removed.
+        set_difference(rhs_col.begin(), rhs_col.end(),
+                       remove_rows.begin(), remove_rows.end(),
+                       std::insert_iterator<id_set>(lhs_col, lhs_col.begin()));
+        return lhs_col;
+    }
+
+    static id_set copy_construct_row_ids(const PhenomatrixBase& rhs, const id_set& remove_rows) {
+        id_set lhs_row_ids;
+        // Remove rows from row_ids list
+        set_difference(rhs.row_ids_.begin(), rhs.row_ids_.end(),
+                       remove_rows.begin(), remove_rows.end(),
+                       std::insert_iterator<id_set>(lhs_row_ids, lhs_row_ids.begin()));
+        return lhs_row_ids;
+    }
+
+
     uint id_;
 
     id_set row_ids_;
@@ -416,7 +441,7 @@ protected:
     map<uint,string> child_ids_;
     string type_;
 
-    omatrix* obs; // set of observations indexed by column
+    omatrix obs; // set of observations indexed by column
 };
 
 #endif // PHENOMATRIX_H_

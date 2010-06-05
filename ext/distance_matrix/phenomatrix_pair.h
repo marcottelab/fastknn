@@ -42,6 +42,10 @@ public:
       s(create_phenomatrix_list(given_id, given_id)),
       distance_function(switch_distance_function(distance_fn))
     { }
+
+    // Copy constructor
+    PhenomatrixPair(const PhenomatrixPair& rhs)
+    : p(rhs.p), s(rhs.s), distance_function(rhs.distance_function) { }
     
     // Return the ID of the source matrix
     uint id() const {
@@ -51,7 +55,7 @@ public:
 
     // Removes rows from the matrices on which we're calculating distances.
     void push_mask(id_set mask_rows) {
-        p.push(Phenomatrix(p.top(), mask_rows));
+        p.push(      Phenomatrix( p.top() , mask_rows ) );
         s.push_back( Phenomatrix( s.back(), mask_rows ) );
     }
 

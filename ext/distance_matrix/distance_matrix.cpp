@@ -10,13 +10,19 @@ DistanceMatrix::DistanceMatrix(
         string distfn,
         cparams classifier_params
 )
- : predict_matrix_(predict_matrix_id, predict_matrix_id)
+ : source_matrices(construct_source_matrices(predict_matrix_id, source_matrix_ids, distfn)),
+   predict_matrix_(predict_matrix_id, source_matrix_ids),
+   classifier_parameters(classifier_params)
 {
-    construct_classifier(classifier_params);
+    construct_classifier(classifier_parameters);
+}
 
-    for (id_set::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
-        source_matrices.push_back( PhenomatrixPair(predict_matrix_id, *st, distfn) );
-    }
+DistanceMatrix::DistanceMatrix(const DistanceMatrix& rhs)
+: source_matrices(rhs.source_matrices),
+  predict_matrix_(rhs.predict_matrix_),
+  classifier_parameters(rhs.classifier_parameters)
+{
+    construct_classifier(classifier_parameters);
 }
 
 
@@ -191,6 +197,9 @@ void Init_distance_matrix() {
                              Arg("write_rows"))                )
             .define_method("push_mask", &DistanceMatrix::push_mask)
             .define_method("pop_mask", &DistanceMatrix::pop_mask)
+            .define_method("predict_matrix_has_column?", &DistanceMatrix::predict_matrix_has_column)
+            .define_method("predict_matrix", &DistanceMatrix::predict_matrix)
+            .define_method("source_matrix_pairs", &DistanceMatrix::source_matrix_pairs)
             .define_method("crossvalidate", &DistanceMatrix::crossvalidate)
             ;
 }

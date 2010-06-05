@@ -16,6 +16,11 @@
             .define_constructor(Constructor<Phenomatrix, uint, uint>())
             .define_method("source_id", &Phenomatrix::source_id);
 
+    Data_Type<FusionPhenomatrix> rb_cFusionPhenomatrix =
+            define_class_under<FusionPhenomatrix, PhenomatrixBase>(rb_mFastknn, "FusionPhenomatrix")
+            .define_constructor(Constructor<FusionPhenomatrix, uint, id_set>())
+            .define_method("source_ids", &FusionPhenomatrix::source_ids);
+
     Data_Type<PhenomatrixPair> rb_cPhenomatrixPair =
             define_class_under<PhenomatrixPair>(rb_mFastknn, "PhenomatrixPair")
             .define_constructor(Constructor<PhenomatrixPair, uint, uint, const string&>())

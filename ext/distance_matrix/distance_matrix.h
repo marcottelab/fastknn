@@ -1,6 +1,13 @@
 #ifndef DISTANCE_MATRIX_H_
 # define DISTANCE_MATRIX_H_
 
+#ifdef RICE
+#include <rice/Data_Object.hpp>
+#include <rice/Address_Registration_Guard.hpp>
+using Rice::Data_Object;
+using Rice::Address_Registration_Guard;
+#endif
+
 #include <boost/regex.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -18,6 +25,7 @@ using fs::ofstream;
 
 typedef std::set<uint> id_set;
 
+#include "fusion_phenomatrix.h"
 #include "phenomatrix_pair.h"
 #include "cparams.h"
 #include "classifier.h"
@@ -39,6 +47,8 @@ public:
     // In other words, this constructor is exclusively for calling from within
     // a C++ environment of some sort.
     DistanceMatrix(uint, id_set, string, cparams);
+
+    DistanceMatrix(const DistanceMatrix& rhs);
 
     ~DistanceMatrix();
 
@@ -102,6 +112,12 @@ public:
         return source_matrices.end(); // not found
     }
 
+    // Determines whether calling observations(j) on the predict matrix is going
+    // to throw an exception.
+    bool predict_matrix_has_column(uint j) const {
+        return predict_matrix_.has_column(j);
+    }
+
     // Find source matrix by matrix ID
     matrix_list::const_iterator find(uint id) const {
         for (matrix_list::const_iterator dt = source_matrices.begin(); dt != source_matrices.end(); ++dt)
@@ -136,8 +152,6 @@ public:
     // Write predictions to a file with a specified path. If you don't want to
     // specify a path, use predict_and_write, or set the first argument to "."
     fs::path predict_and_write_to(const fs::path& dir, uint j, const id_set& write_rows) const {
-        pcolumn predictions = predict(j);
-
         map<float, id_set> sorted_predictions = predict_rows_and_sort(j, write_rows);
 
         // Write to a file named by phenotype ID
@@ -234,8 +248,23 @@ public:
 
         return ret;
     }
-    
+
+    // Make a copy and return the prediction matrix as loaded.
+    FusionPhenomatrix predict_matrix() const {
+        return predict_matrix_;
+    }
+
 #ifdef RICE
+
+    // Make a copy and return the list of source matrices (PhenomatrixPairs)
+    Rice::Object source_matrix_pairs() const {
+        Array ary;
+        for (matrix_list::const_iterator i = source_matrices.begin(); i != source_matrices.end(); ++i) {
+            ary.push( *i );
+        }
+        return ary;
+    }
+
     Rice::Object intersection_size(uint i, uint j) const {
         return to_ruby<size_t>(intersection(i, j).size());
     }
@@ -329,10 +358,20 @@ protected:
     // Set up the classifier to use for predictions
     void construct_classifier(const cparams&);
 
+    static matrix_list construct_source_matrices(uint predict_matrix_id, const id_set& source_matrix_ids, const string& distfn) {
+        matrix_list source_matrices_;
+        for (id_set::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
+            source_matrices_.push_back( PhenomatrixPair(predict_matrix_id, *st, distfn) );
+        }
+        return source_matrices_;
+    }
+
+
     // Database-contents-related stuff
     matrix_list source_matrices;
-    Phenomatrix predict_matrix_;
+    FusionPhenomatrix predict_matrix_;
 
+    cparams classifier_parameters;
     // Allow different classifiers to be subbed in
     Classifier* classifier;
 };
