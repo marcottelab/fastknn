@@ -5,10 +5,7 @@
 #include "phenomatrix_pair.h"
 
 class PhenomatrixPair;
-#ifndef MATRIX_LIST_DEFINED
-# define MATRIX_LIST_DEFINED
 typedef std::list<PhenomatrixPair>          matrix_list;
-#endif
 
 class id_dist {
 public:

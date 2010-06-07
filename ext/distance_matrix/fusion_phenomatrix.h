@@ -5,14 +5,23 @@
 
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 using std::string;
 using std::ostringstream;
+using std::insert_iterator;
 
+#ifndef MATRIX_LIST_DEFINED
+# define MATRIX_LIST_DEFINED
+# include "phenomatrix_pair.h"
+typedef std::list<PhenomatrixPair>          matrix_list;
+#endif
 
 id_set extract_matrix_ids(const matrix_list& matrices);
 id_set extract_row_ids(const matrix_list& matrix_pairs);
 id_set extract_column_ids(const matrix_list& matrix_pairs);
+id_set union_ids(id_set a, id_set b);
+id_set intersect_ids(id_set a, id_set b);
 
 
 class FusionPhenomatrix : public PhenomatrixBase {

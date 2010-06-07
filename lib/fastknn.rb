@@ -4,7 +4,7 @@ $:.unshift(File.dirname(__FILE__)) unless
 require "distance_matrix.so"
 
 module Fastknn
-  VERSION = '0.0.1'
+  VERSION = '0.0.2'
 
   # Automatically-called function connects to the database. In the future this needs
   # to be revised to take a connection string from Rails.

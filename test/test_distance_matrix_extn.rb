@@ -14,7 +14,7 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
     @@dat ||= Fastknn::DistanceMatrix.new(247, [253,257], "hypergeometric", {:classifier => :naivebayes, :k => 10})
 
     @@predict_matrix ||= Fastknn::Phenomatrix.new(247,247)
-    @@source_matrices ||= @@dat.source_matrix_pairs
+    # @@source_matrices ||= @@dat.source_matrix_pairs
     @@masks ||= @@predict_matrix.child_row_ids
     @@first_mask ||= @@masks[264]
     @@second_mask ||= @@masks[259]
@@ -52,21 +52,18 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
   end
 
   def test_predict
-    assert @@d.predict(12).size == 16648
+    assert @@d.predict(12).size == 15570
+    assert @@dat.predict(9831).size == 9388
   end
 
   def test_push_and_pop_mask
     assert @@dat.predict_matrix_has_column?(9831) == true
-    assert @@dat.predict_matrix_has_column?(9854) == false
     @@dat.push_mask @@first_mask
     assert @@dat.predict_matrix_has_column?(9831) == true
-    assert @@dat.predict_matrix_has_column?(9854) == false
     @@dat.pop_mask
     assert @@dat.predict_matrix_has_column?(9831) == true
-    assert @@dat.predict_matrix_has_column?(9854) == false
     @@dat.push_mask @@second_mask
     assert @@dat.predict_matrix_has_column?(9831) == true
-    assert @@dat.predict_matrix_has_column?(9854) == false
     @@dat.pop_mask
   end
 

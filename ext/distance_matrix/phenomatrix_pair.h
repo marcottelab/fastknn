@@ -56,8 +56,8 @@ public:
 
     // Removes rows from the matrices on which we're calculating distances.
     void push_mask(id_set mask_rows) {
-        p.push(      Phenomatrix( p.top() , mask_rows ) );
-        s.push_back( Phenomatrix( s.back(), mask_rows ) );
+        p.push(      Phenomatrix(     p.top() , mask_rows ) );
+        s.push_back( PhenomatrixBase( s.back(), mask_rows ) );
     }
 
 
@@ -116,13 +116,21 @@ public:
         return s.back().observations(j);
     }
 
-    list<Phenomatrix>::const_reverse_iterator s_rbegin() const {
+    list<PhenomatrixBase>::const_reverse_iterator s_rbegin() const {
         return s.rbegin();
     }
 
     // Return the number of matrices on the stack.
     size_t size() const {
         return s.size();
+    }
+
+    id_set row_ids() const {
+        return s.back().row_ids();
+    }
+
+    id_set predictable_column_ids() const {
+        return p.top().column_ids();
     }
 protected:
 
@@ -142,13 +150,13 @@ protected:
         return new_stack;
     }
 
-    static list<Phenomatrix> create_phenomatrix_list(uint id) {
-        list<Phenomatrix> new_list; new_list.push_back(PhenomatrixBase(id));
+    static list<PhenomatrixBase> create_phenomatrix_list(uint id) {
+        list<PhenomatrixBase> new_list; new_list.push_back(PhenomatrixBase(id));
         return new_list;
     }
 
     stack<Phenomatrix> p;
-    list<Phenomatrix> s;
+    list<PhenomatrixBase> s;
 
     // Allow different distance functions to be subbed in.
     double (*distance_function)(size_t, size_t, size_t, size_t);

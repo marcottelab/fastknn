@@ -32,14 +32,14 @@ protected:
     // This is the function that needs to be overridden by other types of classifiers.
     virtual void predict_column(pcolumn& ret, uint j) const = 0;
 
-    list<Phenomatrix>::const_reverse_iterator predict_from(matrix_list::const_iterator source_pair) const {
+    list<PhenomatrixBase>::const_reverse_iterator predict_from(matrix_list::const_iterator source_pair) const {
         // If there is only one element, there is only one thing to predict.
         if (source_pair->size() == 1)
-            return list<Phenomatrix>::const_reverse_iterator( source_pair->s_rbegin() );
+            return list<PhenomatrixBase>::const_reverse_iterator( source_pair->s_rbegin() );
 
         // If there are more elements, we don't want to predict the top -- we just
         // want to use that for distances and such.
-        list<Phenomatrix>::const_reverse_iterator iter( source_pair->s_rbegin() );
+        list<PhenomatrixBase>::const_reverse_iterator iter( source_pair->s_rbegin() );
 
         ++iter;
         return iter;

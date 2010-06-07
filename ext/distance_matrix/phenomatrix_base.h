@@ -151,7 +151,11 @@ public:
 #ifdef DEBUG_TRACE_DISTANCE
 	cerr << "phenomatrix.h: has_column: on matrix " << id_ << ", requested col " << j << " and result will be " << (obs.find(j) != obs.end()) << endl;
 #endif
-        return (obs.find(j) != obs.end());
+        // We don't always have a matrix to check (or we do, but it's empty).
+        if (obs.size() > 0)
+            return (obs.find(j) != obs.end());
+        else
+            return column_ids_.find(j) != column_ids_.end();
     }
 
     bool has_row(uint i) const {

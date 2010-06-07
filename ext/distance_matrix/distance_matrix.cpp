@@ -11,7 +11,7 @@ DistanceMatrix::DistanceMatrix(
         cparams classifier_params
 )
  : source_matrices(construct_source_matrices(predict_matrix_id, source_matrix_ids, distfn)),
-   predict_matrix_(predict_matrix_id, source_matrix_ids),
+   predict_matrix_(predict_matrix_id, source_matrices),
    classifier_parameters(classifier_params)
 {
     construct_classifier(classifier_parameters);
@@ -198,6 +198,7 @@ void Init_distance_matrix() {
             .define_method("push_mask", &DistanceMatrix::push_mask)
             .define_method("pop_mask", &DistanceMatrix::pop_mask)
             .define_method("predict_matrix_has_column?", &DistanceMatrix::predict_matrix_has_column)
+            .define_method("predictable_columns", &DistanceMatrix::predictable_columns)
             .define_method("predict_matrix", &DistanceMatrix::predict_matrix)
             .define_method("source_matrix_pairs", &DistanceMatrix::source_matrix_pairs)
             .define_method("crossvalidate", &DistanceMatrix::crossvalidate)

@@ -4,6 +4,7 @@
             .define_method("parent_id", &PhenomatrixBase::rb_parent_id)
             .define_method("root_id", &PhenomatrixBase::rb_root_id)
             .define_method("id", &PhenomatrixBase::id)
+            .define_method("observations", &PhenomatrixBase::observations)
             .define_method("observations_count", &PhenomatrixBase::observations_size)
             .define_method("has_column?", &PhenomatrixBase::has_column)
             .define_method("row_count", &PhenomatrixBase::row_count)

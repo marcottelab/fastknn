@@ -200,6 +200,8 @@ public:
         ++pt;
 
         for (; pt != source_matrices.end(); ++pt) {
+            if (!pt->predict_matrix_has_column(j)) continue;
+
             id_dist_iter min_tmp = pt->nearest(j);
             if (min_tmp.distance < min.distance) {
                 min = min_tmp;
@@ -228,6 +230,7 @@ public:
         proximity_queue q;
 
         for (matrix_list::const_iterator source_matrix_iter = source_matrices.begin(); source_matrix_iter != source_matrices.end(); ++source_matrix_iter) {
+            if (!source_matrix_iter->predict_matrix_has_column(j)) continue;
             // Add items on to the queue (q) that are within k (or kth_so_far)
             source_matrix_iter->knearest(q, j, k, kth_so_far, source_matrix_iter);
         }
@@ -252,6 +255,10 @@ public:
     // Make a copy and return the prediction matrix as loaded.
     FusionPhenomatrix predict_matrix() const {
         return predict_matrix_;
+    }
+
+    id_set predictable_columns() const {
+        return predict_matrix_.column_ids();
     }
 
 #ifdef RICE
