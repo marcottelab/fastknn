@@ -8,10 +8,10 @@ require "fastknn"
 class TestDistanceMatrixExtn < Test::Unit::TestCase
   def setup
     # Predicting human
-    @@d ||= Fastknn::DistanceMatrix.new(185, [3], "hypergeometric", {:classifier => :naivebayes, :k => 10})
+    @@d ||= Fastknn::DistanceMatrix.new(185, [3], "hypergeometric", {:classifier => :naivebayes, :k => 10, :max_distance => 1})
     
     # Predicting plant
-    @@dat ||= Fastknn::DistanceMatrix.new(247, [253,257], "hypergeometric", {:classifier => :naivebayes, :k => 10})
+    @@dat ||= Fastknn::DistanceMatrix.new(247, [253,257], "hypergeometric", {:classifier => :naivebayes, :k => 10, :max_distance => 1})
 
     @@predict_matrix ||= Fastknn::Phenomatrix.new(247,247)
     # @@source_matrices ||= @@dat.source_matrix_pairs

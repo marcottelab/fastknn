@@ -239,7 +239,7 @@ public:
         proximity_queue ret;
 
         // Find the first k items
-        while (k > 0) {
+        while (k > 0 && !q.empty()) {
             kth_so_far = q.top().distance;
             ret.push(q.top());
             q.pop();

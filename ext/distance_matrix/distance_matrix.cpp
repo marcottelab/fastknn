@@ -28,7 +28,7 @@ DistanceMatrix::DistanceMatrix(const DistanceMatrix& rhs)
 
 void DistanceMatrix::construct_classifier(const cparams& classifier_params) {
     if (classifier_params.classifier == "naivebayes")
-        classifier = new NaiveBayes(this, classifier_params.k);
+        classifier = new NaiveBayes(this, classifier_params.k, classifier_params.max_distance);
     else if (classifier_params.classifier == "simple")
         classifier = new SimpleClassifier(this);
     else {
@@ -118,11 +118,14 @@ Object to_ruby<cparams>(cparams const & param) {
     return param.to_h();
 }
 
+// All parameters must be included in the hash! If any are left out, this will
+// probably throw an exception.
 template<>
 cparams from_ruby<cparams>(Object x) {
     Hash hash(x);
     cparams params( from_ruby<Symbol>(hash[ Symbol("classifier") ]).str() );
     params.k = from_ruby<uint>( hash[ Symbol("k") ]);
+    params.max_distance = from_ruby<float>( hash[ Symbol("max_distance") ] );
 
     return params;
 }

@@ -5,7 +5,7 @@ require 'rake/extensiontask'
 require 'rake/testtask'
 
 PKG = "fastknn"
-PKG_VERSION = [0,0,2]
+PKG_VERSION = [0,0,3]
 AUTHOR = "John O. Woods, Marcotte Lab"
 EMAIL = "john.woods@marcottelab.org"
 HOMEPAGE = "http://github.com/MarcotteLabGit/fastknn"

@@ -9,7 +9,7 @@ require "fastknn"
 sids = [257]
 pid = 247
 #Dir.chdir("tmp/fastknn") do
-dm = Fastknn::DistanceMatrix.new pid, sids, "hypergeometric", {:classifier => :naivebayes, :k => 10}
+dm = Fastknn::DistanceMatrix.new pid, sids, "hypergeometric", {:classifier => :naivebayes, :k => 10, :max_distance => 1}
 dm.predict(9854)
   #pm = dm.predict_matrix
   #sms = dm.source_matrix_pairs

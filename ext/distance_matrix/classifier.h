@@ -68,11 +68,12 @@ protected:
 
 class NaiveBayes : public Classifier {
 public:
-    NaiveBayes(const DistanceMatrix* const rhs, size_t k_);
+    NaiveBayes(const DistanceMatrix* const rhs, size_t k_, float max_distance_);
     virtual ~NaiveBayes() { }
 protected:
     virtual void predict_column(pcolumn& ret, uint j) const;
     size_t k;
+    float max_distance;
 };
 
 

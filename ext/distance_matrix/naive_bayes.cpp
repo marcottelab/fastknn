@@ -1,12 +1,12 @@
 #include "classifier.h"
 
 
-NaiveBayes::NaiveBayes(const DistanceMatrix* const rhs, size_t k_)
-        : Classifier(rhs), k(k_) { }
+NaiveBayes::NaiveBayes(const DistanceMatrix* const rhs, size_t k_, float max_distance_)
+        : Classifier(rhs), k(k_), max_distance(max_distance_) { }
 
 void NaiveBayes::predict_column(pcolumn& ret, uint j) const {
     // Get the k-nearest columns
-    proximity_queue q = d->knearest(j, k);
+    proximity_queue q = d->knearest(j, k, (double)(max_distance));
 
     while (q.size() > 0) {
         id_dist_iter kth_j2 = q.top(); // get first  of the k-nearest columns
