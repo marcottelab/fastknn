@@ -28,7 +28,7 @@ typedef std::set<uint> id_set;
 
 #include "fusion_phenomatrix.h"
 #include "phenomatrix_pair.h"
-#include "cparams.h"
+#include "params.h"
 #include "classifier.h"
 
 
@@ -55,17 +55,17 @@ public:
     // - An array of IDs
     // - A PhenomatrixPair
     // - An array of PhenomatrixPairs
-    DistanceMatrix(uint, Rice::Object);
+    DistanceMatrix(uint, Rice::Object, size_t min_genes = 2);
 #else
     // This constructor is not for Ruby.
-    DistanceMatrix(uint, id_set);
+    DistanceMatrix(uint, id_set, size_t min_genes = 2);
 #endif
 
     DistanceMatrix(const DistanceMatrix& rhs);
 
     ~DistanceMatrix();
 
-    void set_classifier(cparams new_classifier_parameters) {
+    void set_classifier(classifier_params new_classifier_parameters) {
         if (new_classifier_parameters != classifier_parameters)
             construct_classifier(new_classifier_parameters);
     }
@@ -295,7 +295,7 @@ public:
     id_set predictable_columns() const {
         return predict_matrix_.column_ids();
     }
-
+    
 #ifdef RICE
 
     // Make a copy and return the list of source matrices (PhenomatrixPairs)
@@ -317,6 +317,21 @@ public:
             ids.push(to_ruby<uint>(st->id()));
         return ids;
     }
+
+ /*   // This function can be built upon to handle a variety of constraints.
+    template <typename T>
+    void enforce_constraint<T>(Rice::Object constraint_name_obj, Rice::Object constraint_value_obj) {
+        Rice::Symbol constraint( constraint_name_obj                );
+        T                 value( from_ruby<T>(constraint_value_obj) );
+
+        // Add additional constraints below this one.
+        if (constraint == Rice::Symbol("min_genes")) {
+            enforce_min_genes(value);
+        } else {
+            string err("distance_matrix.h: enforce_constraint<T>: unrecognized constraint ") += constraint.str();
+            throw Rice::Exception(rb_eArgError, err.c_str());
+        }
+    } */
 
 #endif
 protected:
@@ -398,16 +413,16 @@ protected:
 
 
     // Set up the classifier to use for predictions
-    void construct_classifier(const cparams&);
+    void construct_classifier(const classifier_params&);
 
 #ifdef RICE
-    static matrix_list construct_source_matrices(uint, Rice::Object);
-    static PhenomatrixPair construct_source_matrix_pair(uint predict_matrix_id, Rice::Object source_or_id);
+    static matrix_list construct_source_matrices(uint, Rice::Object, size_t min_genes);
+    static PhenomatrixPair construct_source_matrix_pair(uint predict_matrix_id, Rice::Object source_or_id, size_t min_genes);
 #endif
-    static matrix_list construct_source_matrices(uint predict_matrix_id, const id_set& source_matrix_ids) {
+    static matrix_list construct_source_matrices(uint predict_matrix_id, const id_set& source_matrix_ids, size_t min_genes) {
         matrix_list source_matrices_;
         for (id_set::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
-            source_matrices_.push_back( PhenomatrixPair(predict_matrix_id, *st) );
+            source_matrices_.push_back( PhenomatrixPair(predict_matrix_id, *st, min_genes) );
         }
         return source_matrices_;
     }
@@ -417,7 +432,7 @@ protected:
     matrix_list source_matrices;
     FusionPhenomatrix predict_matrix_;
 
-    cparams classifier_parameters;
+    classifier_params classifier_parameters;
     // Allow different classifiers to be subbed in
     Classifier* classifier;
 };

@@ -76,20 +76,25 @@ Rice::Object to_ruby<set<fs::path> >(set<fs::path> const & d) {
 
 
 template<>
-Object to_ruby<cparams>(cparams const & param) {
+Object to_ruby<classifier_params>(classifier_params const & param) {
     return param.to_h();
 }
 
 // All parameters must be included in the hash! If any are left out, this will
 // probably throw an exception.
 template<>
-cparams from_ruby<cparams>(Object x) {
+classifier_params from_ruby<classifier_params>(Object x) {
     Hash hash(x);
-    cparams params( from_ruby<Symbol>(hash[ Symbol("classifier") ]).str() );
-    params.k = from_ruby<uint>( hash[ Symbol("k") ]);
-    params.max_distance = from_ruby<float>( hash[ Symbol("max_distance") ] );
 
-    return params;
+    const Symbol CLASSIFIER_S("classifier");
+    const Symbol K_S("k");
+    const Symbol MAX_DISTANCE_S("max_distance");
+
+    classifier_params p(  from_ruby<Symbol>(hash[ CLASSIFIER_S ]).str() );
+    p.k                 = from_ruby<uint>( hash[ K_S ]);
+    p.max_distance      = from_ruby<float>( hash[ MAX_DISTANCE_S ] );
+
+    return p;
 }
 
 

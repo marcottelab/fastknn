@@ -1,6 +1,6 @@
     Data_Type<DistanceMatrix> rb_cDistanceMatrix =
             define_class_under<DistanceMatrix>(rb_mFastknn, "DistanceMatrix")
-            .define_constructor(Constructor<DistanceMatrix, uint, Object>())
+            .define_constructor(Constructor<DistanceMatrix, uint, Object, size_t>())
             .define_method("source_matrix_ids", &DistanceMatrix::source_matrix_ids)
             .define_method("intersection_size", &DistanceMatrix::intersection_size)
             .define_method("intersection_count", &DistanceMatrix::intersection_size)

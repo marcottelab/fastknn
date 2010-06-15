@@ -9,16 +9,16 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
   def setup
     STDERR.puts "TestDistanceMatrixExtn"
     # Predicting human
-    @@d ||= Fastknn.fetch_distance_matrix(185, [3])
+    @@d ||= Fastknn.fetch_distance_matrix(185, [3], 2)
     @@d.classifier = {:classifier => :naivebayes, :k => 10, :max_distance => 1}
     @@d.distance_function = :hypergeometric
     
     # Predicting plant
-    @@dat ||= Fastknn.fetch_distance_matrix(247, [253,257])
+    @@dat ||= Fastknn.fetch_distance_matrix(247, [253,257], 2)
     @@dat.classifier = {:classifier => :naivebayes, :k => 10, :max_distance => 1}
     @@dat.distance_function = :hypergeometric
 
-    @@predict_matrix ||= Fastknn::Phenomatrix.new(247,247)
+    @@predict_matrix ||= Fastknn.fetch_predict_matrix(247,247, 2)
     # @@source_matrices ||= @@dat.source_matrix_pairs
     @@masks ||= @@predict_matrix.child_row_ids
     @@first_mask ||= @@masks[264]

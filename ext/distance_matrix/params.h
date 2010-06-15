@@ -1,5 +1,5 @@
-#ifndef CPARAMS_H_
-# define CPARAMS_H_
+#ifndef PARAMS_H_
+# define PARAMS_H_
 
 #include <string>
 
@@ -10,16 +10,26 @@
 
 using std::string;
 
-class cparams {
-public:
-    cparams(const string& name) : classifier(name), k(0), max_distance(1.0) { }
-    cparams() : classifier(), k(0), max_distance(1.0) { }
 
-    bool operator==(const cparams& rhs) const {
+class params {
+public:
+    params() { }
+    virtual ~params() { }
+    
+    virtual Rice::Object to_h() const = 0;
+};
+
+
+class classifier_params : params {
+public:
+    classifier_params(const string& name) : classifier(name), k(0), max_distance(1.0) { }
+    classifier_params() : classifier(), k(0), max_distance(1.0) { }
+
+    bool operator==(const classifier_params& rhs) const {
         return (classifier == rhs.classifier && k == rhs.k && max_distance == rhs.max_distance);
     }
 
-    bool operator!=(const cparams& rhs) const {
+    bool operator!=(const classifier_params& rhs) const {
         return (classifier != rhs.classifier || k != rhs.k || max_distance != rhs.max_distance);
     }
 

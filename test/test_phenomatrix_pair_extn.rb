@@ -9,7 +9,7 @@ require "fastknn"
 class TestPhenomatrixPairExtn < Test::Unit::TestCase
   def setup
     STDERR.puts "TestPhenomatrixPairExtn"
-    @@pair ||= Fastknn::PhenomatrixPair.new(185, 3)
+    @@pair ||= Fastknn::PhenomatrixPair.new(185, 3, 2)
     @@pair.distance_function = :hypergeometric
   end
 

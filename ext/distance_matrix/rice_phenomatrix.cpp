@@ -1,6 +1,6 @@
     Data_Type<PhenomatrixBase> rb_cPhenomatrixBase =
             define_class_under<PhenomatrixBase>(rb_mFastknn, "PhenomatrixBase")
-            .define_constructor(Constructor<PhenomatrixBase,uint>())
+            .define_constructor(Constructor<PhenomatrixBase,uint,bool,size_t>())
             .define_method("parent_id", &PhenomatrixBase::rb_parent_id)
             .define_method("root_id", &PhenomatrixBase::rb_root_id)
             .define_method("id", &PhenomatrixBase::id)
@@ -16,7 +16,7 @@
 
     Data_Type<Phenomatrix> rb_cPhenomatrix =
             define_class_under<Phenomatrix, PhenomatrixBase>(rb_mFastknn, "Phenomatrix")
-            .define_constructor(Constructor<Phenomatrix, uint, uint>())
+            .define_constructor(Constructor<Phenomatrix, uint, uint, size_t>())
             .define_method("source_id", &Phenomatrix::source_id);
 
     Data_Type<FusionPhenomatrix> rb_cFusionPhenomatrix =
@@ -28,7 +28,7 @@
     // This is never used, from my perspective.
     Data_Type<PhenomatrixPair> rb_cPhenomatrixPair =
             define_class_under<PhenomatrixPair>(rb_mFastknn, "PhenomatrixPair")
-            .define_constructor(Constructor<PhenomatrixPair, Object, Object, Object>())
+            .define_constructor(Constructor<PhenomatrixPair, Object, Object, Object, size_t>())
             .define_method("distance", &PhenomatrixPair::distance)
             .define_method("nearest", &PhenomatrixPair::nearest)
             .define_method("predict_matrix_has_column?", &PhenomatrixPair::predict_matrix_has_column)

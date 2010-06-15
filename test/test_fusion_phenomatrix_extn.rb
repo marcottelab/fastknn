@@ -11,8 +11,8 @@ class TestFusionPhenomatrixExtn < Test::Unit::TestCase
   def setup
     STDERR.puts "TestPhenomatrixExtn"
     @@fp ||= Fastknn::FusionPhenomatrix.new(247, [253,257])
-    @@p253 ||= Fastknn::Phenomatrix.new(247, 253)
-    @@p257 ||= Fastknn::Phenomatrix.new(247, 257)
+    @@p253 ||= Fastknn::Phenomatrix.new(247, 253, 2)
+    @@p257 ||= Fastknn::Phenomatrix.new(247, 257, 2)
     # @@pair ||= Fastknn::PhenomatrixPair.new(247, [253,257], "hypergeometric")
   end
 

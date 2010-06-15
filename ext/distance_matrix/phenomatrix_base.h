@@ -36,10 +36,10 @@ public:
     // can share the same database connection.
     //
     // At some point, it should be revised to accept a Ruby on Rails connection.
-    PhenomatrixBase(uint id, bool is_base_class = true)
+    PhenomatrixBase(uint id, bool is_base_class = true, size_t min_genes = 2)
     : id_(id), child_ids_(fetch_child_ids()), type_("Matrix")
     {
-        base_construct(is_base_class);
+        base_construct(is_base_class, min_genes);
     }
 
 
@@ -175,27 +175,44 @@ public:
 protected:
     // Surrogate constructor, called by both default constructors, but not the
     // copy constructor.
-    void base_construct(bool base = true) {
+    void base_construct(bool base, size_t min_genes) {
         // Get the information about the immediate parent and the root of the tree of matrices.
         std::pair<uint,uint> parent_and_root = fetch_parent_and_root_id();
         parent_id_ = parent_and_root.first;
         root_id_   = parent_and_root.second;
 
         if (base)
-            inherit_construct();
+            inherit_construct(min_genes);
     }
 
     // This will vary from base to child.
-    void inherit_construct() {
+    void inherit_construct(size_t min_genes) {
         // Get matrix attributes
         row_ids_ = fetch_row_ids();
-        column_ids_ = fetch_column_ids();
+        // column_ids_ = fetch_column_ids();
 
         // Create the observation matrix
-        obs = omatrix(column_ids_.size());
+        obs = omatrix(fetch_column_count());
         
         load_matrix();
+
+        // Set column_ids_ and make sure columns have at least min_genes observations.
+        enforce_min_genes(min_genes);
     }
+
+    // This will not vary at all -- removes columns from the matrix that have
+    // below min_genes items in them.
+    void enforce_min_genes(size_t min_genes) {
+        // ensure that each column has at least min_genes in it, and create
+        // column_ids_ based on that.
+        for (omatrix::iterator it = obs.begin(); it != obs.end(); ++it) {
+            if (it->second.size() >= min_genes)
+                column_ids_.insert(it->first);
+            else
+                it->second.clear(); // Empty the set.
+        }
+    }
+
 
     void add_observation(uint i, uint j) {
         obs[j].insert(i);

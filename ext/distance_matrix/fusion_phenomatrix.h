@@ -26,12 +26,12 @@ id_set intersect_ids(id_set a, id_set b);
 
 class FusionPhenomatrix : public PhenomatrixBase {
 public:
-    FusionPhenomatrix(uint id, id_set given_ids)
-    : PhenomatrixBase(id, true),
+    FusionPhenomatrix(uint id, id_set given_ids, size_t min_genes = 2)
+    : PhenomatrixBase(id, true, min_genes),
             given_ids_(given_ids)
     {
         if (given_ids.size() > 1 || *(given_ids.begin()) != id)
-            inherit_construct();
+            inherit_construct(min_genes);
     }
 
     FusionPhenomatrix(uint id, const matrix_list& given_matrices);

@@ -20,16 +20,16 @@ module Fastknn
     @@distance_matrices ||= {}
   end
 
-  def self.fetch_source_matrix id
-    @@source_matrices[id] ||= PhenomatrixBase.new(id)
+  def self.fetch_source_matrix id, min_genes
+    @@source_matrices["#{id}:#{min_genes}"] ||= PhenomatrixBase.new(id, true, min_genes)
   end
 
-  def self.fetch_predict_matrix id, given_id
-    @@predict_matrices["#{id}:#{given_id}"] ||= Phenomatrix.new(id, given_id)
+  def self.fetch_predict_matrix id, given_id, min_genes
+    @@predict_matrices["#{id}:#{given_id}:#{min_genes}"] ||= Phenomatrix.new(id, given_id, min_genes)
   end
 
   # Cache and return a DistanceMatrix
-  def self.fetch_distance_matrix predict_id, source_ids
+  def self.fetch_distance_matrix predict_id, source_ids, min_genes
     if source_ids.is_a?(Fixnum)
       source_ids = [source_ids]
     else
@@ -37,21 +37,21 @@ module Fastknn
     end
 
     # Cache the matrix pairs
-    source_pairs = source_ids.collect { |sid| fetch_matrix_pair(predict_id, sid) }
+    source_pairs = source_ids.collect { |sid| fetch_matrix_pair(predict_id, sid, min_genes) }
 
-    key = "#{predict_id}:#{source_ids.join(',')}"
+    key = "#{predict_id}:#{source_ids.join(',')}:#{min_genes}"
 
-    @@distance_matrices[key] ||= DistanceMatrix.new(predict_id, source_pairs)
+    @@distance_matrices[key] ||= DistanceMatrix.new(predict_id, source_pairs, min_genes)
   end
 
-  def self.crossvalidate predict_matrix_id, source_matrix_ids, distfn = :hypergeometric, classifier_options = {}, dir = "tmp/fastknn"
+  def self.crossvalidate predict_matrix_id, source_matrix_ids, min_genes = 2, distfn = :hypergeometric, classifier_options = {}, dir = "tmp/fastknn"
     opts = {
       :classifier   => :naivebayes,
       :k            => 10,
       :max_distance => 1.0
     }.merge classifier_options
 
-    dm = Fastknn.fetch_distance_matrix(predict_matrix_id, source_matrix_ids)
+    dm = Fastknn.fetch_distance_matrix(predict_matrix_id, source_matrix_ids, min_genes)
     dm.classifier        = opts
     dm.distance_function = distfn
 
@@ -71,11 +71,11 @@ module Fastknn
 #protected
   # Cache and return a PhenomatrixPair. This is protected because we don't want
   # the user pushing or popping masks.
-  def self.fetch_matrix_pair predict_id, source_id
-    predict_matrix = fetch_predict_matrix(predict_id, source_id)
-    source_matrix  = fetch_source_matrix(source_id)
+  def self.fetch_matrix_pair predict_id, source_id, min_genes
+    predict_matrix = fetch_predict_matrix(predict_id, source_id, min_genes)
+    source_matrix  = fetch_source_matrix(source_id, min_genes)
 
-    @@matrix_pairs["#{predict_id}:#{source_id}"] ||= PhenomatrixPair.new(predict_matrix, source_matrix)
+    @@matrix_pairs["#{predict_id}:#{source_id}:#{min_genes}"] ||= PhenomatrixPair.new(predict_matrix, source_matrix, min_genes)
   end
 
 end

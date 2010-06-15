@@ -43,27 +43,30 @@ class PhenomatrixPair {
 public:
 #ifdef RICE
     // Specialty constructor just for Ruby. Allows Ruby to pass in
-    PhenomatrixPair(Rice::Object self, Rice::Object predict_or_id, Rice::Object source_or_id)
-    : s(create_phenomatrix_list(source_or_id)),
-      p(create_phenomatrix_stack(predict_or_id, s.back().id())),
+    PhenomatrixPair(Rice::Object self, Rice::Object predict_or_id, Rice::Object source_or_id, size_t min_genes)
+    : s(create_phenomatrix_list(source_or_id, min_genes)),
+      p(create_phenomatrix_stack(predict_or_id, s.back().id(), min_genes)),
       distance_function(switch_distance_function("hypergeometric"))
     { }
 #endif
-    PhenomatrixPair(uint id, PhenomatrixBase given_phenomatrix)
+    PhenomatrixPair(uint id, PhenomatrixBase given_phenomatrix, size_t min_genes = 2)
     : s(create_phenomatrix_list(given_phenomatrix)),
-      p(create_phenomatrix_stack(id, given_phenomatrix.id())),
+      p(create_phenomatrix_stack(id, given_phenomatrix.id(), min_genes)),
       distance_function(switch_distance_function("hypergeometric"))
     { }
 
-    PhenomatrixPair(uint id, uint given_id)
-    : s(create_phenomatrix_list(given_id)),            // source species matrix
-      p(create_phenomatrix_stack(id, given_id)),       // predict species matrix
+    PhenomatrixPair(uint id, uint given_id, size_t min_genes = 2)
+    : s(create_phenomatrix_list(given_id, min_genes)),            // source species matrix
+      p(create_phenomatrix_stack(id, given_id, min_genes)),       // predict species matrix
       distance_function(switch_distance_function("hypergeometric"))
     { }
 
     // Copy constructor
     PhenomatrixPair(const PhenomatrixPair& rhs)
-    : s(rhs.s), p(rhs.p), distance_function(rhs.distance_function) { }
+    : s(rhs.s),
+      p(rhs.p),
+      distance_function(rhs.distance_function)
+    { }
 
     ~PhenomatrixPair() { }
     
@@ -186,13 +189,13 @@ protected:
     }
 
     // Create the predict matrix stack
-    static stack<Phenomatrix> create_phenomatrix_stack(uint id, uint given_id) {
+    static stack<Phenomatrix> create_phenomatrix_stack(uint id, uint given_id, size_t min_genes) {
         stack<Phenomatrix> new_stack; new_stack.push(Phenomatrix(id, given_id));
         return new_stack;
     }
 
     // Create the source matrix stack (well, actually a list)
-    static list<PhenomatrixBase> create_phenomatrix_list(uint id) {
+    static list<PhenomatrixBase> create_phenomatrix_list(uint id, size_t min_genes) {
         list<PhenomatrixBase> new_list; new_list.push_back(PhenomatrixBase(id));
         return new_list;
     }
@@ -202,9 +205,9 @@ protected:
     }
     
 #ifdef RICE
-    static stack<Phenomatrix> create_phenomatrix_stack(Rice::Object predict_or_id, uint given_id) {
+    static stack<Phenomatrix> create_phenomatrix_stack(Rice::Object predict_or_id, uint given_id, size_t min_genes) {
         if (predict_or_id.is_a( rb_cFixnum ))
-            return create_phenomatrix_stack( from_ruby<uint>(predict_or_id), given_id );
+            return create_phenomatrix_stack( from_ruby<uint>(predict_or_id), given_id, min_genes );
 
         else if (predict_or_id.is_a( Rice::Data_Type<Phenomatrix>::klass() )) {
             stack<Phenomatrix> new_stack;
@@ -220,9 +223,9 @@ protected:
           throw Rice::Exception(rb_eArgError, "phenomatrix_pair.h: create_phenomatrix_stack: Argument must be a Phenomatrix");  
     }
 
-    static list<PhenomatrixBase> create_phenomatrix_list(Rice::Object source_or_id) {
+    static list<PhenomatrixBase> create_phenomatrix_list(Rice::Object source_or_id, size_t min_genes) {
         if (source_or_id.is_a( rb_cFixnum ))
-            return create_phenomatrix_list(from_ruby<uint>(source_or_id));
+            return create_phenomatrix_list(from_ruby<uint>(source_or_id), min_genes);
 
         else if (source_or_id.is_instance_of(Rice::Data_Type<PhenomatrixBase>::klass())) {
             list<PhenomatrixBase> new_list;

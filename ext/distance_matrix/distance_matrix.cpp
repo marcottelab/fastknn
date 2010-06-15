@@ -7,24 +7,22 @@
 #ifdef RICE
 #include "ruby.h"
 
-PhenomatrixPair DistanceMatrix::construct_source_matrix_pair(uint predict_matrix_id, Rice::Object source_or_id) {
+PhenomatrixPair DistanceMatrix::construct_source_matrix_pair(uint predict_matrix_id, Rice::Object source_or_id, size_t min_genes) {
     using namespace Rice;
-    
-    // cerr << "inspect source_or_id: " << source_or_id.call("inspect") << endl;
 
     if (source_or_id.is_a( rb_cFixnum ))
-        return PhenomatrixPair(predict_matrix_id, from_ruby<uint>(source_or_id));
+        return PhenomatrixPair(predict_matrix_id, from_ruby<uint>(source_or_id), min_genes);
 
     if (source_or_id.is_a(Data_Type<PhenomatrixPair>::klass()))
         return from_ruby<PhenomatrixPair>(source_or_id);
 
     if (source_or_id.is_a(Data_Type<PhenomatrixBase>::klass()))
-        return PhenomatrixPair(predict_matrix_id, from_ruby<PhenomatrixBase>(source_or_id));
+        return PhenomatrixPair(predict_matrix_id, from_ruby<PhenomatrixBase>(source_or_id), min_genes);
 
     throw Rice::Exception(rb_eArgError, "distance_matrix.cpp: construct_source_matrix_pair: Need a positive Fixnum, a PhenomatrixPair, or a PhenomatrixBase");
 }
 
-matrix_list DistanceMatrix::construct_source_matrices(uint predict_matrix_id, Rice::Object sources_or_ids) {
+matrix_list DistanceMatrix::construct_source_matrices(uint predict_matrix_id, Rice::Object sources_or_ids, size_t min_genes) {
     using namespace Rice;
 
     matrix_list sources_list;
@@ -32,17 +30,21 @@ matrix_list DistanceMatrix::construct_source_matrices(uint predict_matrix_id, Ri
 
         Rice::Array ary(sources_or_ids);
         for (Rice::Array::iterator it = ary.begin(); it != ary.end(); ++it)
-            sources_list.push_back( construct_source_matrix_pair(predict_matrix_id, *it) );
+            sources_list.push_back( construct_source_matrix_pair(predict_matrix_id, *it, min_genes) );
 
     }
     else // Not a list -- just one
-        sources_list.push_back(construct_source_matrix_pair(predict_matrix_id, sources_or_ids));
+        sources_list.push_back(construct_source_matrix_pair(predict_matrix_id, sources_or_ids, min_genes));
         
     return sources_list;
 }
 
-DistanceMatrix::DistanceMatrix(uint predict_matrix_id, Rice::Object sources_or_ids)
- : source_matrices(construct_source_matrices(predict_matrix_id, sources_or_ids)),
+DistanceMatrix::DistanceMatrix(
+        uint predict_matrix_id,
+        Rice::Object sources_or_ids,
+        size_t min_genes
+)
+ : source_matrices(construct_source_matrices(predict_matrix_id, sources_or_ids, min_genes)),
    predict_matrix_(predict_matrix_id, source_matrices),
    classifier_parameters("naivebayes"),
    classifier(NULL)
@@ -54,9 +56,10 @@ DistanceMatrix::DistanceMatrix(uint predict_matrix_id, Rice::Object sources_or_i
 #else
 DistanceMatrix::DistanceMatrix(
         uint predict_matrix_id,
-        id_set source_matrix_ids
+        id_set source_matrix_ids,
+        size_t min_genes
 )
- : source_matrices(construct_source_matrices(predict_matrix_id, source_matrix_ids)),
+ : source_matrices(construct_source_matrices(predict_matrix_id, source_matrix_ids, min_genes)),
    predict_matrix_(predict_matrix_id, source_matrices),
    classifier_parameters("naivebayes"),
    classifier(NULL)
@@ -76,7 +79,7 @@ DistanceMatrix::DistanceMatrix(const DistanceMatrix& rhs)
 }
 
 
-void DistanceMatrix::construct_classifier(const cparams& classifier_params) {
+void DistanceMatrix::construct_classifier(const classifier_params& classifier_params) {
     if (classifier) delete classifier;
     
     classifier_parameters = classifier_params;
@@ -111,7 +114,7 @@ pcolumn DistanceMatrix::predict(uint j) const {
 #include "ruby_conversions.cpp"
 
 Rice::Object DistanceMatrix::get_classifier() const {
-    return to_ruby<cparams>(classifier_parameters);
+    return to_ruby<classifier_params>(classifier_parameters);
 }
 
 using namespace Rice;
@@ -140,7 +143,7 @@ int main() {
     c.connect("dbname=crossval_development user=jwoods password=youwish1");
 
     id_set sources; sources.insert(3);
-    cparams cp("naivebayes"); cp.k = 10;
+    classifier_params cp("naivebayes"); cp.k = 10;
     DistanceMatrix d(185, sources, "hypergeometric", cp);
     d.crossvalidate();
     return 0;
