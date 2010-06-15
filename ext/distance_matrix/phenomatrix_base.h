@@ -53,11 +53,7 @@ public:
       child_ids_(rhs.child_ids_),
       type_(rhs.type_),
       obs(copy_construct_omatrix(rhs))
-    {        
-#ifdef DEBUG_TRACE_COPY
-        cerr << "phenomatrix_base.h: Copy constructor called! id = " << id_ << endl;
-#endif
-    }
+    { }
 
     PhenomatrixBase(const PhenomatrixBase& rhs, const id_set& remove_rows)
     : id_(rhs.id_),
@@ -68,11 +64,7 @@ public:
       child_ids_(rhs.child_ids_), // not safe to use!
       type_(rhs.type_),
       obs(copy_construct_omatrix(rhs, remove_rows))
-    {
-#ifdef DEBUG_TRACE_COPY
-        cerr << "phenomatrix_base.h: Copy constructor with mask called! id = " << id_ << endl;
-#endif
-    }
+    { }
 
     virtual ~PhenomatrixBase() { }
 

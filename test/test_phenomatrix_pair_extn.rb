@@ -6,9 +6,11 @@ require "test/unit"
 # $:.unshift File.dirname(__FILE__) + "/../ext/phenomatrix"
 require "fastknn"
 
-class TestPhenomatrixExtn < Test::Unit::TestCase
+class TestPhenomatrixPairExtn < Test::Unit::TestCase
   def setup
-    @@pair ||= Fastknn::PhenomatrixPair.new(185, 3, "hypergeometric")
+    STDERR.puts "TestPhenomatrixPairExtn"
+    @@pair ||= Fastknn::PhenomatrixPair.new(185, 3)
+    @@pair.distance_function = :hypergeometric
   end
 
   def test_truth

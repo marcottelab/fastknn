@@ -13,6 +13,15 @@ using std::string;
 class cparams {
 public:
     cparams(const string& name) : classifier(name), k(0), max_distance(1.0) { }
+    cparams() : classifier(), k(0), max_distance(1.0) { }
+
+    bool operator==(const cparams& rhs) const {
+        return (classifier == rhs.classifier && k == rhs.k && max_distance == rhs.max_distance);
+    }
+
+    bool operator!=(const cparams& rhs) const {
+        return (classifier != rhs.classifier || k != rhs.k || max_distance != rhs.max_distance);
+    }
 
     string classifier;
     uint k;

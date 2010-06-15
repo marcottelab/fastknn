@@ -3,6 +3,7 @@
 
 #ifdef RICE
 #include <rice/Data_Object.hpp>
+#include <rice/Data_Type.hpp>
 #include <rice/Address_Registration_Guard.hpp>
 using Rice::Data_Object;
 using Rice::Address_Registration_Guard;
@@ -33,25 +34,66 @@ typedef std::set<uint> id_set;
 
 class Classifier;
 
+//#ifdef RICE
+//namespace Rice {
+    //Data_Type<Phenomatrix> phenomatrix_type;
+    //Data_Type<PhenomatrixBase> phenomatrix_base_type;
+    //Data_Type<DistanceMatrix> distance_matrix_type;
+//}
+//#endif
+
 
 class DistanceMatrix {
     friend class Classifier;
     friend class NaiveBayes;
 public:
 
-    // This constructor allows a connection to be shared among multiple objects by
-    // taking a pointer to an existing one. It is assumed that Ruby won't pass
-    // such a pointer, and so we use a set of uints instead of a Rice::Array (which
-    // is neccessary for the Ruby interface) as well.
-    //
-    // In other words, this constructor is exclusively for calling from within
-    // a C++ environment of some sort.
-    DistanceMatrix(uint, id_set, string, cparams);
+#ifdef RICE
+    // Specialty constructor just for Ruby. Allows Ruby to pass in, for arg 2,
+    // any of:
+    // - An ID
+    // - An array of IDs
+    // - A PhenomatrixPair
+    // - An array of PhenomatrixPairs
+    DistanceMatrix(uint, Rice::Object);
+#else
+    // This constructor is not for Ruby.
+    DistanceMatrix(uint, id_set);
+#endif
 
     DistanceMatrix(const DistanceMatrix& rhs);
 
     ~DistanceMatrix();
 
+    void set_classifier(cparams new_classifier_parameters) {
+        if (new_classifier_parameters != classifier_parameters)
+            construct_classifier(new_classifier_parameters);
+    }
+
+
+    void set_distance_function_str(const string& dfn) {
+        BOOST_FOREACH( PhenomatrixPair& source_pair, source_matrices ) {
+            source_pair.set_distance_function_str(dfn);
+        }
+    }
+
+#ifdef RICE
+    void set_distance_function(Rice::Object dfn) {
+        set_distance_function_str(from_ruby<Rice::Symbol>(dfn).str());
+    }
+
+    Rice::Object get_classifier() const;
+
+    Rice::Object get_distance_functions() const {
+        Rice::Hash h;
+
+        BOOST_FOREACH(const PhenomatrixPair& source_pair, source_matrices) {
+            h[ to_ruby<uint>(source_pair.id()) ] = source_pair.get_distance_function();
+        }
+
+        return h;
+    }
+#endif
 
     // Native C++ cross-validate function. Probably doesn't add much in terms of
     // speed to the native Ruby, but wrote it to simplify debugging.
@@ -79,7 +121,6 @@ public:
         }
 
     }
-
 
     // Removes rows from the matrices on which we're calculating distances.
     void push_mask(id_set mask_rows) {
@@ -126,11 +167,9 @@ public:
         return source_matrices.end(); // not found
     }
 
-
     // Given a row i and a column j, calculate a score (using the classifier function)
     // for the gene's likelihood of being involved in the phenotype.
     pcolumn predict(uint j) const;
-
 
     // Predicts for all columns and writes and sorts results
     set<fs::path> predict_and_write_all_to(const fs::path& dir, const id_set& write_rows) const {
@@ -148,7 +187,6 @@ public:
         return predict_and_write_all_to(dir, write_rows);
     }
 
-
     // Write predictions to a file with a specified path. If you don't want to
     // specify a path, use predict_and_write, or set the first argument to "."
     fs::path predict_and_write_to(const fs::path& dir, uint j, const id_set& write_rows) const {
@@ -162,13 +200,11 @@ public:
         return filepath;
     }
 
-
     // Predicts for a column, sorts, then returns the filename.
     fs::path predict_and_write(uint j, id_set write_rows = id_set()) const {
         fs::path dir("predictions");
         return predict_and_write_to(dir, j, write_rows);
     }
-
 
     // Return the distance, according to our distance function, between the two
     // columns.
@@ -186,7 +222,6 @@ public:
 
         return j2source->distance(j1, j2);
     }
-
 
     // Note that this function returns only the SINGLE NEAREST -- as in, the first
     // found!
@@ -365,10 +400,14 @@ protected:
     // Set up the classifier to use for predictions
     void construct_classifier(const cparams&);
 
-    static matrix_list construct_source_matrices(uint predict_matrix_id, const id_set& source_matrix_ids, const string& distfn) {
+#ifdef RICE
+    static matrix_list construct_source_matrices(uint, Rice::Object);
+    static PhenomatrixPair construct_source_matrix_pair(uint predict_matrix_id, Rice::Object source_or_id);
+#endif
+    static matrix_list construct_source_matrices(uint predict_matrix_id, const id_set& source_matrix_ids) {
         matrix_list source_matrices_;
         for (id_set::const_iterator st = source_matrix_ids.begin(); st != source_matrix_ids.end(); ++st) {
-            source_matrices_.push_back( PhenomatrixPair(predict_matrix_id, *st, distfn) );
+            source_matrices_.push_back( PhenomatrixPair(predict_matrix_id, *st) );
         }
         return source_matrices_;
     }
@@ -382,6 +421,5 @@ protected:
     // Allow different classifiers to be subbed in
     Classifier* classifier;
 };
-
 
 #endif // DISTANCE_MATRIX_H_

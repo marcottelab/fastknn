@@ -35,7 +35,7 @@ public:
     // Copy and mask
     Phenomatrix(const Phenomatrix& rhs, const id_set& mask_rows)
     : PhenomatrixBase(rhs, mask_rows), given_id_(rhs.given_id_)
-    { }
+    {  }
 
     ~Phenomatrix() { }
 
@@ -44,9 +44,6 @@ public:
 protected:
     // OVERRIDE SQL FROM PHENOMATRIX_BASE.
     string load_matrix_sql(uint matrix_id) const {
-#ifdef DEBUG_TRACE_INHERITED_CONSTRUCTION
-        cerr << "phenomatrix.h: load_matrix_sql" << endl;
-#endif
         return string("SELECT DISTINCT e1.i,e1.j FROM entries e1 \n") +
                "INNER JOIN entries e2 ON (e1.i = e2.i) \n" +
                "WHERE e1.matrix_id = " + lexical_cast<string>(matrix_id) + " \n" +

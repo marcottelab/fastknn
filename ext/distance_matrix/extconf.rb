@@ -13,7 +13,7 @@ if RUBY_VERSION =~ /1.9/ then
 end
 
 $CPPFLAGS += " -DRICE"
-$CXXFLAGS += " -O3"
+$CXXFLAGS += " -O0"
 
 $objs = [
   "distance_matrix.o",

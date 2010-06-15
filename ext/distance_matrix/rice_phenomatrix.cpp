@@ -24,13 +24,16 @@
             .define_constructor(Constructor<FusionPhenomatrix, uint, id_set>())
             .define_method("source_ids", &FusionPhenomatrix::source_ids);
 
+    // Note that the constructor has an extra object to accomodate the self bug.
+    // This is never used, from my perspective.
     Data_Type<PhenomatrixPair> rb_cPhenomatrixPair =
             define_class_under<PhenomatrixPair>(rb_mFastknn, "PhenomatrixPair")
-            .define_constructor(Constructor<PhenomatrixPair, uint, uint, const string&>())
+            .define_constructor(Constructor<PhenomatrixPair, Object, Object, Object>())
             .define_method("distance", &PhenomatrixPair::distance)
             .define_method("nearest", &PhenomatrixPair::nearest)
             .define_method("predict_matrix_has_column?", &PhenomatrixPair::predict_matrix_has_column)
             .define_method("source_matrix_has_column?", &PhenomatrixPair::source_matrix_has_column)
             .define_method("push_mask", &PhenomatrixPair::push_mask)
             .define_method("pop_mask", &PhenomatrixPair::pop_mask)
+            .define_method("distance_function=", &PhenomatrixPair::set_distance_function)
             ;

@@ -4,29 +4,82 @@
 // All functions which make use of Classifier must be located here since it's
 // a circular include
 
-DistanceMatrix::DistanceMatrix(
-        uint predict_matrix_id,
-        id_set source_matrix_ids,
-        string distfn,
-        cparams classifier_params
-)
- : source_matrices(construct_source_matrices(predict_matrix_id, source_matrix_ids, distfn)),
+#ifdef RICE
+#include "ruby.h"
+
+PhenomatrixPair DistanceMatrix::construct_source_matrix_pair(uint predict_matrix_id, Rice::Object source_or_id) {
+    using namespace Rice;
+    
+    // cerr << "inspect source_or_id: " << source_or_id.call("inspect") << endl;
+
+    if (source_or_id.is_a( rb_cFixnum ))
+        return PhenomatrixPair(predict_matrix_id, from_ruby<uint>(source_or_id));
+
+    if (source_or_id.is_a(Data_Type<PhenomatrixPair>::klass()))
+        return from_ruby<PhenomatrixPair>(source_or_id);
+
+    if (source_or_id.is_a(Data_Type<PhenomatrixBase>::klass()))
+        return PhenomatrixPair(predict_matrix_id, from_ruby<PhenomatrixBase>(source_or_id));
+
+    throw Rice::Exception(rb_eArgError, "distance_matrix.cpp: construct_source_matrix_pair: Need a positive Fixnum, a PhenomatrixPair, or a PhenomatrixBase");
+}
+
+matrix_list DistanceMatrix::construct_source_matrices(uint predict_matrix_id, Rice::Object sources_or_ids) {
+    using namespace Rice;
+
+    matrix_list sources_list;
+    if (sources_or_ids.is_a( rb_cArray )) {
+
+        Rice::Array ary(sources_or_ids);
+        for (Rice::Array::iterator it = ary.begin(); it != ary.end(); ++it)
+            sources_list.push_back( construct_source_matrix_pair(predict_matrix_id, *it) );
+
+    }
+    else // Not a list -- just one
+        sources_list.push_back(construct_source_matrix_pair(predict_matrix_id, sources_or_ids));
+        
+    return sources_list;
+}
+
+DistanceMatrix::DistanceMatrix(uint predict_matrix_id, Rice::Object sources_or_ids)
+ : source_matrices(construct_source_matrices(predict_matrix_id, sources_or_ids)),
    predict_matrix_(predict_matrix_id, source_matrices),
-   classifier_parameters(classifier_params)
+   classifier_parameters("naivebayes"),
+   classifier(NULL)
 {
     construct_classifier(classifier_parameters);
 }
+
+
+#else
+DistanceMatrix::DistanceMatrix(
+        uint predict_matrix_id,
+        id_set source_matrix_ids
+)
+ : source_matrices(construct_source_matrices(predict_matrix_id, source_matrix_ids)),
+   predict_matrix_(predict_matrix_id, source_matrices),
+   classifier_parameters("naivebayes"),
+   classifier(NULL)
+{
+    construct_classifier(classifier_parameters);
+}
+#endif
 
 DistanceMatrix::DistanceMatrix(const DistanceMatrix& rhs)
 : source_matrices(rhs.source_matrices),
   predict_matrix_(rhs.predict_matrix_),
   classifier_parameters(rhs.classifier_parameters)
 {
-    construct_classifier(classifier_parameters);
+    // Only initialize the classifier if the RHS DistanceMatrix has one setup.
+    if (rhs.classifier)     construct_classifier(classifier_parameters);
+    else                    classifier = NULL;
 }
 
 
 void DistanceMatrix::construct_classifier(const cparams& classifier_params) {
+    if (classifier) delete classifier;
+    
+    classifier_parameters = classifier_params;
     if (classifier_params.classifier == "naivebayes")
         classifier = new NaiveBayes(this, classifier_params.k, classifier_params.max_distance);
     else if (classifier_params.classifier == "simple")
@@ -54,114 +107,15 @@ pcolumn DistanceMatrix::predict(uint j) const {
 
 
 #ifdef RICE
+
+#include "ruby_conversions.cpp"
+
+Rice::Object DistanceMatrix::get_classifier() const {
+    return to_ruby<cparams>(classifier_parameters);
+}
+
 using namespace Rice;
 
-////////////////////////////////////////////////////////////////////////////////
-// CONVERSION FUNCTIONS FOR RETURN VALUES AND ARGUMENT TYPES THAT NEED TO BE
-// EXPOSED TO RUBY THROUGH RICE
-
-template<>
-Rice::Object to_ruby<id_dist>(id_dist const & d) {
-    return to_ruby<Array>(d.to_a());
-}
-
-template<>
-Rice::Object to_ruby<id_dist_iter>(id_dist_iter const & d) {
-    return to_ruby<Array>(d.to_a());
-}
-
-
-template <>
-Object to_ruby<id_set>(id_set const & d) {
-    Array ary;
-    for (id_set::const_iterator i = d.begin(); i != d.end(); ++i)
-        ary.push( to_ruby<uint>(*i) );
-    return ary;
-}
-
-
-// Convert from Rice::Array to std::set
-template <>
-id_set from_ruby<id_set>(Object x) {
-    Array ary(x);
-    id_set result;
-    for (Array::iterator i = ary.begin(); i != ary.end(); ++i)
-        result.insert(from_ruby<uint>(*i));
-    return result;
-}
-
-template <>
-Rice::Object to_ruby<fs::path>(fs::path const & d) {
-    String s(d.string());
-    return s;
-}
-
-template<>
-Rice::Object to_ruby<map<uint, id_set> >(map<uint,id_set> const & d) {
-    Hash h;
-    for (map<uint,id_set>::const_iterator dt = d.begin(); dt != d.end(); ++dt)
-        h[ to_ruby<uint>(dt->first) ] = to_ruby<id_set>(dt->second);
-    return h;
-}
-
-template <>
-Rice::Object to_ruby<set<fs::path> >(set<fs::path> const & d) {
-    Array ary;
-    for (set<fs::path>::const_iterator dt = d.begin(); dt != d.end(); ++dt)
-        ary.push( to_ruby<fs::path>(*dt) );
-    return ary;
-}
-
-
-template<>
-Object to_ruby<cparams>(cparams const & param) {
-    return param.to_h();
-}
-
-// All parameters must be included in the hash! If any are left out, this will
-// probably throw an exception.
-template<>
-cparams from_ruby<cparams>(Object x) {
-    Hash hash(x);
-    cparams params( from_ruby<Symbol>(hash[ Symbol("classifier") ]).str() );
-    params.k = from_ruby<uint>( hash[ Symbol("k") ]);
-    params.max_distance = from_ruby<float>( hash[ Symbol("max_distance") ] );
-
-    return params;
-}
-
-
-template <>
-Object to_ruby<proximity_queue>(proximity_queue const & d) {
-    Array ary;
-    proximity_queue pq(d); // make a copy
-    while (pq.size() > 0) {
-        ary.push(to_ruby<proximity_queue::value_type>(pq.top()));
-        pq.pop();
-    }
-    return ary;
-}
-
-
-template <>
-Object to_ruby<pcolumn>(pcolumn const & d) {
-    Hash h;
-    for (pcolumn::const_iterator i = d.begin(); i != d.end(); ++i) {
-        h[to_ruby<uint>(i->first)] = to_ruby<float>(i->second);
-    }
-    return h;
-}
-
-
-// Convert from Rice::Array to std::set
-template <>
-pcolumn from_ruby<pcolumn>(Object x) {
-    Hash h(x);
-    pcolumn xmap;
-    for (Hash::iterator i = h.begin(); i != h.end(); ++i)
-        xmap[from_ruby<uint>(i->first)] = from_ruby<float>(i->second);
-    return xmap;
-}
 
 
 
@@ -175,37 +129,7 @@ void Init_distance_matrix() {
 
     #include "rice_connection.cpp"
     #include "rice_phenomatrix.cpp"
-
-    Data_Type<DistanceMatrix> rb_cDistanceMatrix =
-            define_class_under<DistanceMatrix>(rb_mFastknn, "DistanceMatrix")
-            .define_constructor(Constructor<DistanceMatrix,uint,id_set,string,cparams>())
-            .define_method("source_matrix_ids", &DistanceMatrix::source_matrix_ids)
-            .define_method("intersection_size", &DistanceMatrix::intersection_size)
-            .define_method("intersection_count", &DistanceMatrix::intersection_size)
-            .define_method("nearest", &DistanceMatrix::nearest)
-            .define_method("distance", &DistanceMatrix::distance)
-            .define_method("knearest", &DistanceMatrix::knearest,
-                           ( Arg("j"),
-                             Arg("k") = (uint)(1),
-                             Arg("bound") = (double)(1.0))     )
-            .define_method("predict", &DistanceMatrix::predict)
-            .define_method("predict_and_write", &DistanceMatrix::predict_and_write,
-                           ( Arg("j"),
-                             Arg("write_rows") = id_set())     )
-            .define_method("predict_and_write_all", &DistanceMatrix::predict_and_write_all,
-                           ( Arg("write_rows") = id_set())     )
-            .define_method("predict_and_write_to", &DistanceMatrix::predict_and_write_to,
-                           ( Arg("dir"),
-                             Arg("j"),
-                             Arg("write_rows"))                )
-            .define_method("push_mask", &DistanceMatrix::push_mask)
-            .define_method("pop_mask", &DistanceMatrix::pop_mask)
-            .define_method("predict_matrix_has_column?", &DistanceMatrix::predict_matrix_has_column)
-            .define_method("predictable_columns", &DistanceMatrix::predictable_columns)
-            .define_method("predict_matrix", &DistanceMatrix::predict_matrix)
-            .define_method("source_matrix_pairs", &DistanceMatrix::source_matrix_pairs)
-            .define_method("crossvalidate", &DistanceMatrix::crossvalidate)
-            ;
+    #include "rice_distance_matrix.cpp"
 }
 
 

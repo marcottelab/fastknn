@@ -4,7 +4,7 @@ $:.unshift(File.dirname(__FILE__)) unless
 require "distance_matrix.so"
 
 module Fastknn
-  VERSION = '0.0.3'
+  VERSION = '0.0.4'
 
   # Automatically-called function connects to the database. In the future this needs
   # to be revised to take a connection string from Rails.
@@ -12,15 +12,48 @@ module Fastknn
     @@c ||= Fastknn::Connection.new
     @@c.connect(dbstr)
     puts "Connected to database"
+
+    # Create hashes to store matrices, matrix pairs, and distance matrices
+    @@source_matrices ||= {}
+    @@predict_matrices ||= {}
+    @@matrix_pairs ||= {}
+    @@distance_matrices ||= {}
   end
 
-  def self.crossvalidate predict_matrix_id, source_matrix_ids, distfn = "hypergeometric", classifier_options = {}, dir = "tmp/fastknn"
+  def self.fetch_source_matrix id
+    @@source_matrices[id] ||= PhenomatrixBase.new(id)
+  end
+
+  def self.fetch_predict_matrix id, given_id
+    @@predict_matrices["#{id}:#{given_id}"] ||= Phenomatrix.new(id, given_id)
+  end
+
+  # Cache and return a DistanceMatrix
+  def self.fetch_distance_matrix predict_id, source_ids
+    if source_ids.is_a?(Fixnum)
+      source_ids = [source_ids]
+    else
+      source_ids = source_ids.sort.uniq
+    end
+
+    # Cache the matrix pairs
+    source_pairs = source_ids.collect { |sid| fetch_matrix_pair(predict_id, sid) }
+
+    key = "#{predict_id}:#{source_ids.join(',')}"
+
+    @@distance_matrices[key] ||= DistanceMatrix.new(predict_id, source_pairs)
+  end
+
+  def self.crossvalidate predict_matrix_id, source_matrix_ids, distfn = :hypergeometric, classifier_options = {}, dir = "tmp/fastknn"
     opts = {
-      :classifier => :naivebayes,
-      :k          => 10
+      :classifier   => :naivebayes,
+      :k            => 10,
+      :max_distance => 1.0
     }.merge classifier_options
 
-    source_matrix_ids = [source_matrix_ids] if source_matrix_ids.is_a?(Fixnum)
+    dm = Fastknn.fetch_distance_matrix(predict_matrix_id, source_matrix_ids)
+    dm.classifier        = opts
+    dm.distance_function = distfn
 
     puts "Current dir = #{Dir.pwd}"
 
@@ -30,56 +63,20 @@ module Fastknn
     end
 
     # Change to that directory and run the cross-validation function
-    Dir.chdir(dir) do
-      
-      dm = DistanceMatrix.new predict_matrix_id, source_matrix_ids, distfn, opts
-      
+    Dir.chdir(dir) do   
       dm.crossvalidate
     end
   end
 
-#  def self.crossvalidate predict_matrix_id, source_matrix_ids, distfn = "hypergeometric", classifier_options = {}
-#    opts = {
-#      :classifier => :naivebayes,
-#      :k          => 10
-#    }.merge classifier_options
-#
-#    source_matrix_ids = [source_matrix_ids] if source_matrix_ids.is_a?(Fixnum)
-#
-#    predict_matrix = predict_matrix_id
-#    predict_matrix = Matrix.find(predict_matrix_id) unless predict_matrix.is_a?(Matrix)
-#
-#    dm = DistanceMatrix.new(predict_matrix_id, source_matrix_ids, distfn, opts)
-#
-#    counter = 1
-#
-#    list_of_row_sets_for(predict_matrix).each do |row_set|
-#      # Tell it which rows to ignore in the distance calculations.
-#      dm.push_mask row_set
-#
-#      STDERR.puts("Predicting #{counter}")
-#
-#      # Tell it which rows to predict and write to files.
-#      dm.predict_and_write_all row_set
-#
-#      # Now remove the mask we added before.
-#      dm.pop_mask
-#
-#      counter += 1
-#    end
-#  end
-#
-#
-#  # Given a matrix, find the children and get the rows associated.
-#  def self.list_of_row_sets_for predict_matrix
-#    # Get list of row sets
-#    row_sets = []
-#    predict_matrix.children.each do |child|
-#      row_sets << child.rows
-#    end
-#
-#    row_sets
-#  end
+#protected
+  # Cache and return a PhenomatrixPair. This is protected because we don't want
+  # the user pushing or popping masks.
+  def self.fetch_matrix_pair predict_id, source_id
+    predict_matrix = fetch_predict_matrix(predict_id, source_id)
+    source_matrix  = fetch_source_matrix(source_id)
+
+    @@matrix_pairs["#{predict_id}:#{source_id}"] ||= PhenomatrixPair.new(predict_matrix, source_matrix)
+  end
 
 end
 

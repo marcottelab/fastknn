@@ -1,11 +1,20 @@
 #ifndef PHENOMATRIX_PAIR_H_
 # define PHENOMATRIX_PAIR_H_
 
+#ifdef RICE
+#include <rice/Object.hpp>
+#include <rice/Symbol.hpp>
+#include <rice/Data_Type.hpp>
+#endif
+
+#include <iostream>
 #include <stack>
 #include <list>
 #include <boost/foreach.hpp>
 using std::list;
 using std::stack;
+using std::cerr;
+using std::endl;
 
 #include "id_dist.h"
 #include "connection.h"
@@ -32,21 +41,31 @@ typedef std::list<PhenomatrixPair>          matrix_list;
 // distances and such (see push_mask and pop_mask).
 class PhenomatrixPair {
 public:
-    PhenomatrixPair(uint id, uint given_id, const string& distance_fn)
-    : p(create_phenomatrix_stack(id, given_id)),      // predict species matrix
-      s(create_phenomatrix_list(given_id)), // source species matrix
-      distance_function(switch_distance_function(distance_fn))
+#ifdef RICE
+    // Specialty constructor just for Ruby. Allows Ruby to pass in
+    PhenomatrixPair(Rice::Object self, Rice::Object predict_or_id, Rice::Object source_or_id)
+    : s(create_phenomatrix_list(source_or_id)),
+      p(create_phenomatrix_stack(predict_or_id, s.back().id())),
+      distance_function(switch_distance_function("hypergeometric"))
+    { }
+#endif
+    PhenomatrixPair(uint id, PhenomatrixBase given_phenomatrix)
+    : s(create_phenomatrix_list(given_phenomatrix)),
+      p(create_phenomatrix_stack(id, given_phenomatrix.id())),
+      distance_function(switch_distance_function("hypergeometric"))
     { }
 
-    PhenomatrixPair(const string& dbstr, uint id, uint given_id, const string& distance_fn)
-    : p(create_phenomatrix_stack(id, given_id)),
-      s(create_phenomatrix_list(given_id)),
-      distance_function(switch_distance_function(distance_fn))
+    PhenomatrixPair(uint id, uint given_id)
+    : s(create_phenomatrix_list(given_id)),            // source species matrix
+      p(create_phenomatrix_stack(id, given_id)),       // predict species matrix
+      distance_function(switch_distance_function("hypergeometric"))
     { }
 
     // Copy constructor
     PhenomatrixPair(const PhenomatrixPair& rhs)
-    : p(rhs.p), s(rhs.s), distance_function(rhs.distance_function) { }
+    : s(rhs.s), p(rhs.p), distance_function(rhs.distance_function) { }
+
+    ~PhenomatrixPair() { }
     
     // Return the ID of the source matrix
     uint id() const {
@@ -132,11 +151,32 @@ public:
     id_set predictable_column_ids() const {
         return p.top().column_ids();
     }
+
+#ifdef RICE
+    Rice::Object get_distance_function() const {
+        std::map<double(*)(size_t,size_t,size_t,size_t), std::string> choices;
+        choices[&hypergeometric] = "hypergeometric";
+        choices[&euclidean]      = "euclidean";
+        choices[&manhattan]      = "manhattan";
+
+        return Rice::Symbol(choices[distance_function]);
+    }
+
+    // Take a symbol, e.g., :hypergeometric, and use it to set the distance function.
+    void set_distance_function(Rice::Object dfn) {
+        distance_function = switch_distance_function( from_ruby<Rice::Symbol>(dfn).str() );
+    }
+#endif
+    
+    // Take a string, e.g., "hypergeometric", and use it to set the distance function.
+    void set_distance_function_str(const string& dfn) {
+        distance_function = switch_distance_function(dfn);
+    }
 protected:
 
     // Returns a function pointer to a distance function based on a request made via
     // a string.
-    double (*switch_distance_function(const std::string& distance_measure))(size_t,size_t,size_t,size_t) {
+    static double (*switch_distance_function(const std::string& distance_measure))(size_t,size_t,size_t,size_t) {
         std::map<std::string, double(*)(size_t,size_t,size_t,size_t)> choices;
         choices["hypergeometric"] = &hypergeometric;
         choices["euclidean"]      = &euclidean;
@@ -145,23 +185,61 @@ protected:
         return choices[distance_measure];
     }
 
+    // Create the predict matrix stack
     static stack<Phenomatrix> create_phenomatrix_stack(uint id, uint given_id) {
         stack<Phenomatrix> new_stack; new_stack.push(Phenomatrix(id, given_id));
         return new_stack;
     }
 
+    // Create the source matrix stack (well, actually a list)
     static list<PhenomatrixBase> create_phenomatrix_list(uint id) {
         list<PhenomatrixBase> new_list; new_list.push_back(PhenomatrixBase(id));
         return new_list;
     }
+    static list<PhenomatrixBase> create_phenomatrix_list(const PhenomatrixBase& pb) {
+        list<PhenomatrixBase> new_list; new_list.push_back(pb);
+        return new_list;
+    }
+    
+#ifdef RICE
+    static stack<Phenomatrix> create_phenomatrix_stack(Rice::Object predict_or_id, uint given_id) {
+        if (predict_or_id.is_a( rb_cFixnum ))
+            return create_phenomatrix_stack( from_ruby<uint>(predict_or_id), given_id );
 
-    stack<Phenomatrix> p;
+        else if (predict_or_id.is_a( Rice::Data_Type<Phenomatrix>::klass() )) {
+            stack<Phenomatrix> new_stack;
+            new_stack.push( from_ruby<Phenomatrix>(predict_or_id) );
+
+            // Check that the predict matrix has the source matrix as a given
+            if (new_stack.top().source_id() != given_id)
+                throw Rice::Exception(rb_eArgError, "phenomatrix_pair.h: create_phenomatrix_stack: Source matrix does not match the source id given to the predict matrix");
+
+            return new_stack;
+
+        } else
+          throw Rice::Exception(rb_eArgError, "phenomatrix_pair.h: create_phenomatrix_stack: Argument must be a Phenomatrix");  
+    }
+
+    static list<PhenomatrixBase> create_phenomatrix_list(Rice::Object source_or_id) {
+        if (source_or_id.is_a( rb_cFixnum ))
+            return create_phenomatrix_list(from_ruby<uint>(source_or_id));
+
+        else if (source_or_id.is_instance_of(Rice::Data_Type<PhenomatrixBase>::klass())) {
+            list<PhenomatrixBase> new_list;
+            new_list.push_back(from_ruby<PhenomatrixBase>(source_or_id));
+            return new_list;
+            
+        } else
+          throw Rice::Exception(rb_eArgError, "phenomatrix_pair.h: create_phenomatrix_list: Argument must be a PhenomatrixBase");
+    }
+#endif
+
     list<PhenomatrixBase> s;
+    stack<Phenomatrix> p;
 
     // Allow different distance functions to be subbed in.
     double (*distance_function)(size_t, size_t, size_t, size_t);
 };
-
 
 #ifndef MATRIX_LIST_DEFINED
 # define MATRIX_LIST_DEFINED

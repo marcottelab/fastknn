@@ -8,6 +8,7 @@ require "fastknn"
 
 class TestPhenomatrixExtn < Test::Unit::TestCase
   def setup
+    STDERR.puts "TestPhenomatrixExtn"
     @@p ||= Fastknn::Phenomatrix.new(185, 3)
     @@pb ||= Fastknn::PhenomatrixBase.new(185)
     @@pp ||= Fastknn::Phenomatrix.new(185, 185)

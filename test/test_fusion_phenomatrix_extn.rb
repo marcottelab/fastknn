@@ -7,8 +7,9 @@ require "test/unit"
 # $:.unshift File.dirname(__FILE__) + "/../ext/phenomatrix"
 require "fastknn"
 
-class TestPhenomatrixExtn < Test::Unit::TestCase
+class TestFusionPhenomatrixExtn < Test::Unit::TestCase
   def setup
+    STDERR.puts "TestPhenomatrixExtn"
     @@fp ||= Fastknn::FusionPhenomatrix.new(247, [253,257])
     @@p253 ||= Fastknn::Phenomatrix.new(247, 253)
     @@p257 ||= Fastknn::Phenomatrix.new(247, 257)

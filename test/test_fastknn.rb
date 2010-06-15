@@ -1,6 +1,6 @@
 require File.dirname(__FILE__) + '/test_helper.rb'
 
-class TestFastknn < Test::Unit::TestCase
+class TestDistanceMatrixExtn < Test::Unit::TestCase
 
   def setup
   end
