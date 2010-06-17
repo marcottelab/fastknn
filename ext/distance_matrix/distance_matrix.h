@@ -113,7 +113,16 @@ public:
                 id_set write_rows(mt->second);
 
                 fs::path dir_name = "predictions" + lexical_cast<string>(fold_count);
-                predict_and_write_all_to(dir_name, write_rows);
+
+                try {
+                    predict_and_write_all_to(dir_name, write_rows);
+                }
+#ifdef RICE
+                catch (Rice::Exception e) {
+                    pop_mask(); // Reset to how it was before.
+                    throw e;
+                }
+#endif
             }
             pop_mask();
 
@@ -176,8 +185,24 @@ public:
         set<fs::path> ret;
 
         id_set columns = predict_matrix_.column_ids();
-        for (id_set::const_iterator jt = columns.begin(); jt != columns.end(); ++jt)
-            ret.insert( predict_and_write_to(dir, *jt, write_rows) );
+        for (id_set::const_iterator jt = columns.begin(); jt != columns.end(); ++jt) {
+            try {
+                ret.insert( predict_and_write_to(dir, *jt, write_rows) );
+            }
+#ifdef RICE
+            catch (Rice::Exception e) {
+                string err(e.message().str());
+                err += " while predicting column " + lexical_cast<string>(*jt) + " in crossvalidation";
+                throw Rice::Exception(rb_eArgError, err.c_str());
+            }
+#else
+            catch (...) {
+                cerr << "Exception thrown while predicting column " << *jt << endl;
+                throw;
+            }
+#endif
+
+        }
 
         return ret;
     }
@@ -228,6 +253,7 @@ public:
     //
     // If you want multiple nearest, use a different function.
     id_dist_iter nearest(uint j) const {
+        throw_on_missing_predict_column(j);
         // Do a priming read to save an assignment -- particularly since we're
         // likely to have only one source matrix.
         matrix_list::const_iterator pt = source_matrices.begin();
@@ -251,17 +277,16 @@ public:
     // source matrix
     id_set intersection(uint j1, uint j2) const {
         matrix_list::const_iterator f = find_by_column(j2);
-#ifdef DEBUG_TRACE_INTERSECTION
-        cerr << "intersection(2): source matrix = " << f->id() << ", j1=" << j1 << ", j2=" << j2 << endl;
-#endif
         if (f == source_matrices.end())
             return id_set(); // empty
-        
         return f->intersection(j1, j2);
     }
 
+
     // Find the k items closest to j
     proximity_queue knearest(uint j, size_t k = 1, double kth_so_far = 100.0) const {
+        throw_on_missing_predict_column(j);
+        
         proximity_queue q;
 
         for (matrix_list::const_iterator source_matrix_iter = source_matrices.begin(); source_matrix_iter != source_matrices.end(); ++source_matrix_iter) {
@@ -295,7 +320,7 @@ public:
     id_set predictable_columns() const {
         return predict_matrix_.column_ids();
     }
-    
+
 #ifdef RICE
 
     // Make a copy and return the list of source matrices (PhenomatrixPairs)
@@ -318,23 +343,20 @@ public:
         return ids;
     }
 
- /*   // This function can be built upon to handle a variety of constraints.
-    template <typename T>
-    void enforce_constraint<T>(Rice::Object constraint_name_obj, Rice::Object constraint_value_obj) {
-        Rice::Symbol constraint( constraint_name_obj                );
-        T                 value( from_ruby<T>(constraint_value_obj) );
-
-        // Add additional constraints below this one.
-        if (constraint == Rice::Symbol("min_genes")) {
-            enforce_min_genes(value);
-        } else {
-            string err("distance_matrix.h: enforce_constraint<T>: unrecognized constraint ") += constraint.str();
-            throw Rice::Exception(rb_eArgError, err.c_str());
-        }
-    } */
-
 #endif
 protected:
+    void throw_on_missing_predict_column(uint j) const {
+        if (!predict_matrix_.has_column(j)) {
+            string err = "distance_matrix.h: knearest: column " + lexical_cast<string>(j) + " does not exist in predict matrix.";
+#ifdef RICE
+            throw Rice::Exception(rb_eArgError, err.c_str());
+#else
+            cerr << err << endl;
+            throw;
+#endif
+        }
+    }
+    
     // Create a number of predictions directories in which to store output.
     //
     // Before creation, old directories matching predictions[0-9]+ will be

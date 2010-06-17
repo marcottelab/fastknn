@@ -105,6 +105,8 @@ DistanceMatrix::~DistanceMatrix() {
 
 
 pcolumn DistanceMatrix::predict(uint j) const {
+    throw_on_missing_predict_column(j);
+    
     return (*classifier)(j);
 }
 

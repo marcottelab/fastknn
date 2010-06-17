@@ -12,6 +12,11 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
     @@d ||= Fastknn.fetch_distance_matrix(185, [3], 2)
     @@d.classifier = {:classifier => :naivebayes, :k => 10, :max_distance => 1}
     @@d.distance_function = :hypergeometric
+
+    d4 ||= Fastknn.fetch_distance_matrix(185, [3], 4)
+    d4.classifier = {:classifier => :naivebayes, :k => 10, :max_distance => 1}
+    d4.distance_function = :hypergeometric
+
     
     # Predicting plant
     @@dat ||= Fastknn.fetch_distance_matrix(247, [253,257], 2)
@@ -35,6 +40,32 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
 #    # STDERR.puts("Distance is #{dist}")
 #    assert 0 < dist
 #    assert dist < 1
+#  end
+
+  def test_min_genes
+    d4 = Fastknn.fetch_distance_matrix(185, [3], 4)
+    d2 = Fastknn.fetch_distance_matrix(185, [3], 2)
+    assert d4.predictable_columns.size == 179
+    assert d2.predictable_columns.size == 289
+
+    s4 = Fastknn.fetch_source_matrix(3, 4)
+    s2 = Fastknn.fetch_source_matrix(3, 2)
+    assert s4.column_ids.size == 3005
+    assert s2.column_ids.size == 4056
+
+    j = d2.nearest(3)[0]
+    assert j != d4.nearest(3)[0]
+    assert s2.has_column?(2950)
+    assert !s4.has_column?(2950)
+    assert s4.has_column?(4146)
+    assert s2.has_column?(4146)
+  end
+
+#  def test_predictable_columns
+#    s2 = Fastknn.fetch_source_matrix(3, 2)
+#    p2 = Fastknn.fetch_matrix_pair(185, 3, 2)
+#    d2 = Fastknn.fetch_distance_matrix(185, [3], 2)
+#    assert((p2.predictable_columns - s2.column_ids).size == 0)
 #  end
 
   def test_intersection_size

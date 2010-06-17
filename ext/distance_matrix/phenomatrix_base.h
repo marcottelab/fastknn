@@ -8,8 +8,10 @@ typedef unsigned int uint;
 # include <rice/Constructor.hpp>
 #endif
 #include <map>
+#include <queue>
 #include <iostream>
 using std::map;
+using std::queue;
 //#include <boost/numeric/ublas/matrix_sparse.hpp>
 
 #include "connection.h"
@@ -99,6 +101,13 @@ public:
 
     uint parent_id() const { return parent_id_; }
 
+    size_t min_observations_count() const {
+        size_t min = UINT_MAX;
+        for (omatrix::const_iterator it = obs.begin(); it != obs.end(); ++it)
+            if (it->second.size() < min) min = it->second.size();
+        return min;
+    }
+
     // Get column
     id_set observations(uint j) const {
         omatrix::const_iterator jt = obs.find(j);
@@ -143,11 +152,7 @@ public:
 #ifdef DEBUG_TRACE_DISTANCE
 	cerr << "phenomatrix.h: has_column: on matrix " << id_ << ", requested col " << j << " and result will be " << (obs.find(j) != obs.end()) << endl;
 #endif
-        // We don't always have a matrix to check (or we do, but it's empty).
-        if (obs.size() > 0)
-            return (obs.find(j) != obs.end());
-        else
-            return column_ids_.find(j) != column_ids_.end();
+        return (column_ids_.find(j) != column_ids_.end());
     }
 
     bool has_row(uint i) const {
@@ -205,11 +210,19 @@ protected:
     void enforce_min_genes(size_t min_genes) {
         // ensure that each column has at least min_genes in it, and create
         // column_ids_ based on that.
+        queue<omatrix::const_iterator> erase_q;
+
         for (omatrix::iterator it = obs.begin(); it != obs.end(); ++it) {
             if (it->second.size() >= min_genes)
                 column_ids_.insert(it->first);
             else
-                it->second.clear(); // Empty the set.
+                erase_q.push(it);
+        }
+
+        // Remove columns from obs that are below the threshold
+        while (erase_q.size() > 0) {
+            obs.erase(erase_q.front());
+            erase_q.pop();
         }
     }
 

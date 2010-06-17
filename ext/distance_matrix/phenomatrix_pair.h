@@ -15,6 +15,8 @@ using std::list;
 using std::stack;
 using std::cerr;
 using std::endl;
+using std::pair;
+using std::make_pair;
 
 #include "id_dist.h"
 #include "connection.h"
@@ -132,6 +134,10 @@ public:
 
     size_t max_intersection_size() const {
         return s.back().row_count();
+    }
+
+    pair<size_t, size_t> min_observations_count() const {
+        return make_pair<size_t,size_t>(p.top().min_observations_count(), s.back().min_observations_count());
     }
 
     id_set observations(uint j) const {

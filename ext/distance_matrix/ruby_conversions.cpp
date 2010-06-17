@@ -23,6 +23,14 @@ Data_Type<PhenomatrixPair> phenomatrix_pair_type;
 //}
 
 template<>
+Rice::Object to_ruby<pair<size_t, size_t> >(pair<size_t, size_t> const & d) {
+    Rice::Array ary;
+    ary.push(d.first);
+    ary.push(d.second);
+    return ary;
+}
+
+template<>
 Rice::Object to_ruby<id_dist>(id_dist const & d) {
     return to_ruby<Array>(d.to_a());
 }
