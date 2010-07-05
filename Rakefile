@@ -27,6 +27,8 @@ spec = Hoe.spec PKG do |p|
   p.extra_deps << ["test_benchmark", ">= 0.4.7"]
   p.extra_deps << ["rice", ">= 1.3.2"]
 
+  p.spec_extras[:files] = FileList['Rakefile', 'lib/fastknn.rb', 'test/*.rb', 'ext/**/*.cpp', 'ext/**/*.h'].to_a
+
   p.description =<<EOF
 Fastknn is a C++-implemented Ruby module for k-nearest neighbors
 analyses, providing for multi-stage cross-validation.
