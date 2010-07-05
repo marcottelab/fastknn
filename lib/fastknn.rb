@@ -4,7 +4,83 @@ $:.unshift(File.dirname(__FILE__)) unless
 require "distance_matrix.so"
 
 module Fastknn
-  VERSION = '0.0.5'
+  VERSION = '0.0.6'
+
+  # Allow Phenomatrix types to be cached as string keys in a hash
+  class PhenomatrixBase
+    def parent_id?
+      self.parent_id.nil? ? nil : self.parent_id
+    end
+
+    def inspect additional_h = []
+      h = []
+      h << ["id", self.id]
+      h << ["parent_id", self.parent_id? ? self.parent_id : "nil"]
+      h << ["root_id", self.root_id.to_s]
+      h << ["row_count", self.row_ids.size]
+      h << ["column_count", self.column_ids.size]
+      h << ["children_count", self.child_ids.size]
+      h << ["min_genes", self.min_genes]
+      h.concat additional_h
+
+      "#<#{self.class} " + h.collect { |pair| pair.join(": ") }.join(", ") + ">"
+    end
+
+    def to_cache_key
+      "#{self.id}:#{self.min_genes}"
+    end
+  end
+
+  class Phenomatrix
+    alias :source_matrix_id :source_id
+    alias :given_id :source_id
+    def inspect
+      super [["source_id", self.source_id]]
+    end
+
+    def to_cache_key
+      "#{self.id}:#{self.source_matrix_id}:#{self.min_genes}"
+    end
+  end
+
+  
+  class PhenomatrixPair
+    alias :predict_matrix_id :predict_id
+    alias :source_matrix_id :id
+    alias :source_id :id
+    def inspect additional_h = []
+      h = []
+      h << ["id", self.id]
+      h << ["predict_matrix_id", self.predict_matrix_id]
+      h << ["size", self.size]
+      h << ["min_genes", "[#{self.min_genes.join(",")}]"]
+      h.concat additional_h
+
+      "#<#{self.class} " + h.collect { |pair| pair.join(": ") }.join(", ") + ">"
+    end
+
+    def to_cache_key
+      "#{self.predict_matrix_id}:#{self.source_matrix_id}:#{self.min_genes}"
+    end
+  end
+
+
+  class DistanceMatrix
+    alias :predict_matrix_id :id
+    def inspect additional_h = []
+      h = []
+      h << ["id", self.id]
+      h << ["source_matrix_ids", "[#{self.source_matrix_ids.join(",")}]"]
+      h << ["min_genes", self.min_genes]
+      h.concat additional_h
+
+      "#<#{self.class} " + h.collect { |pair| pair.join(": ") }.join(", ") + ">"
+    end
+
+    def to_cache_key
+      "#{self.predict_matrix_id}:#{self.source_matrix_ids.sort.join(',')}:#{self.min_genes}"
+    end
+  end
 
   # Automatically-called function connects to the database. In the future this needs
   # to be revised to take a connection string from Rails.
@@ -20,7 +96,7 @@ module Fastknn
     @@distance_matrices ||= {}
 
     # Keep track of matrices that are cached -- true is cached, non-existent or false is not cached.
-    @@cached ||= {}
+    @@cached ||= Hash.new{ |h,k| h[k] = [] }
   end
 
   # Return a list of cached matrices
@@ -29,13 +105,26 @@ module Fastknn
   end
 
   def self.fetch_source_matrix id, min_genes
-    self.mark_as_cached id
-    @@source_matrices["#{id}:#{min_genes}"] ||= PhenomatrixBase.new(id, true, min_genes)
+    key = "#{id}:#{min_genes}"
+
+    @@source_matrices[key] ||= PhenomatrixBase.new(id, true, min_genes)
+    item = @@source_matrices[key]
+
+    self.mark_as_cached id, item
+
+    item
   end
 
   def self.fetch_predict_matrix id, given_id, min_genes
-    self.mark_as_cached id
-    @@predict_matrices["#{id}:#{given_id}:#{min_genes}"] ||= Phenomatrix.new(id, given_id, min_genes)
+    key = "#{id}:#{given_id}:#{min_genes}"
+
+    @@predict_matrices[key] ||= Phenomatrix.new(id, given_id, min_genes)
+    item = @@predict_matrices[key]
+
+    self.mark_as_cached id, item
+    self.mark_as_cached given_id, item
+
+    item
   end
 
   # Cache and return a DistanceMatrix
@@ -51,8 +140,13 @@ module Fastknn
 
     key = "#{predict_id}:#{source_ids.join(',')}:#{min_genes}"
 
-    self.mark_as_cached id
     @@distance_matrices[key] ||= DistanceMatrix.new(predict_id, source_pairs, min_genes)
+    item = @@distance_matrices[key]
+
+    self.mark_as_cached predict_id, item
+    source_ids.each { |given_id|  self.mark_as_cached(given_id, item) }
+
+    item
   end
 
   def self.crossvalidate predict_matrix_id, source_matrix_ids, min_genes = 2, distfn = :hypergeometric, classifier_options = {}, dir = "tmp/fastknn"
@@ -86,7 +180,13 @@ module Fastknn
     predict_matrix = fetch_predict_matrix(predict_id, source_id, min_genes)
     source_matrix  = fetch_source_matrix(source_id, min_genes)
 
-    @@matrix_pairs["#{predict_id}:#{source_id}:#{min_genes}"] ||= PhenomatrixPair.new(predict_matrix, source_matrix, min_genes)
+    key                   = "#{predict_id}:#{source_id}:#{min_genes}"
+    @@matrix_pairs[key] ||= PhenomatrixPair.new(predict_matrix, source_matrix, min_genes)
+    
+    item                  = @@matrix_pairs[key]
+    Fastknn.mark_as_cached predict_id, item
+    
+    item
   end
 
   # This allows Rails to lock certain matrices which may be loaded.
@@ -94,9 +194,26 @@ module Fastknn
     @@cached.has_key?(matrix_id) ? @@cached[matrix_id] : false
   end
 
+  def self.uncache matrix_id
+    @@cached[matrix_id].each do |cache_item|
+      case cache_item.class.to_s
+      when "Fastknn::PhenomatrixBase" then @@source_matrices.delete(cache_item.to_cache_key)
+      when "Fastknn::Phenomatrix"     then @@predict_matrices.delete(cache_item.to_cache_key)
+      when "Fastknn::PhenomatrixPair" then @@matrix_pairs.delete(cache_item.to_cache_key)
+      when "Fastknn::DistanceMatrix"  then @@distance_matrices.delete(cache_item.to_cache_key)
+      else
+        STDERR.puts "Error uncaching, unknown class #{cache_item.class}"
+        return false
+      end
+    end
+
+    @@cached.delete(matrix_id)
+    true
+  end
+
 protected
-  def self.mark_as_cached matrix_id
-    @@cached[matrix_id] = true
+  def self.mark_as_cached id, cache_item
+    @@cached[id] << cache_item
   end
 end
 

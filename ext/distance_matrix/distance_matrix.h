@@ -77,6 +77,13 @@ public:
         }
     }
 
+    uint id() const {
+        return predict_matrix_.id();
+    }
+
+    // As initialized, min number of genes
+    size_t min_genes() const { return min_genes_; }
+
 #ifdef RICE
     void set_distance_function(Rice::Object dfn) {
         set_distance_function_str(from_ruby<Rice::Symbol>(dfn).str());
@@ -457,6 +464,8 @@ protected:
     classifier_params classifier_parameters;
     // Allow different classifiers to be subbed in
     Classifier* classifier;
+
+    size_t min_genes_;
 };
 
 #endif // DISTANCE_MATRIX_H_

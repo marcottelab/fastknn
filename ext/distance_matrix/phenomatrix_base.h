@@ -39,7 +39,7 @@ public:
     //
     // At some point, it should be revised to accept a Ruby on Rails connection.
     PhenomatrixBase(uint id, bool is_base_class = true, size_t min_genes = 2)
-    : id_(id), child_ids_(fetch_child_ids()), type_("Matrix")
+    : id_(id), min_genes_(min_genes), child_ids_(fetch_child_ids()), type_("Matrix")
     {
         base_construct(is_base_class, min_genes);
     }
@@ -48,6 +48,7 @@ public:
     // Copy constructor
     PhenomatrixBase(const PhenomatrixBase& rhs)
     : id_(rhs.id_),
+      min_genes_(rhs.min_genes_),
       row_ids_(rhs.row_ids_),
       column_ids_(rhs.column_ids_),
       root_id_(rhs.root_id_),
@@ -59,6 +60,7 @@ public:
 
     PhenomatrixBase(const PhenomatrixBase& rhs, const id_set& remove_rows)
     : id_(rhs.id_),
+      min_genes_(rhs.min_genes_),
       row_ids_(copy_construct_row_ids(rhs, remove_rows)),
       column_ids_(rhs.column_ids_),
       root_id_(rhs.root_id_),
@@ -100,6 +102,10 @@ public:
 
 
     uint parent_id() const { return parent_id_; }
+
+    // Return the min genes setting -- not the same as min_observations_count,
+    // which returns the actual minimum number of genes in any column.
+    size_t min_genes() const { return min_genes_; }
 
     size_t min_observations_count() const {
         size_t min = UINT_MAX;
@@ -224,6 +230,8 @@ protected:
             obs.erase(erase_q.front());
             erase_q.pop();
         }
+
+        min_genes_ = min_genes;
     }
 
 
@@ -499,6 +507,7 @@ protected:
 
 
     uint id_;
+    uint min_genes_;
 
     id_set row_ids_;
     id_set column_ids_;

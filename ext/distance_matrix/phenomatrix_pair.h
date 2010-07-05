@@ -77,6 +77,10 @@ public:
         return s.back().id();
     }
 
+    uint predict_id() const {
+        return p.top().id();
+    }
+
 
     // Removes rows from the matrices on which we're calculating distances.
     void push_mask(id_set mask_rows) {
@@ -151,6 +155,11 @@ public:
     // Return the number of matrices on the stack.
     size_t size() const {
         return s.size();
+    }
+
+    // The lowest min_genes setting
+    pair<size_t,size_t> min_genes() const {
+        return make_pair<size_t,size_t>(p.top().min_genes(), s.back().min_genes());
     }
 
     id_set row_ids() const {

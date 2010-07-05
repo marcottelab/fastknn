@@ -47,7 +47,8 @@ DistanceMatrix::DistanceMatrix(
  : source_matrices(construct_source_matrices(predict_matrix_id, sources_or_ids, min_genes)),
    predict_matrix_(predict_matrix_id, source_matrices),
    classifier_parameters("naivebayes"),
-   classifier(NULL)
+   classifier(NULL),
+   min_genes_(min_genes)
 {
     construct_classifier(classifier_parameters);
 }
@@ -62,7 +63,8 @@ DistanceMatrix::DistanceMatrix(
  : source_matrices(construct_source_matrices(predict_matrix_id, source_matrix_ids, min_genes)),
    predict_matrix_(predict_matrix_id, source_matrices),
    classifier_parameters("naivebayes"),
-   classifier(NULL)
+   classifier(NULL),
+   min_genes_(min_genes)
 {
     construct_classifier(classifier_parameters);
 }
@@ -71,7 +73,8 @@ DistanceMatrix::DistanceMatrix(
 DistanceMatrix::DistanceMatrix(const DistanceMatrix& rhs)
 : source_matrices(rhs.source_matrices),
   predict_matrix_(rhs.predict_matrix_),
-  classifier_parameters(rhs.classifier_parameters)
+  classifier_parameters(rhs.classifier_parameters),
+  min_genes_(rhs.min_genes_)
 {
     // Only initialize the classifier if the RHS DistanceMatrix has one setup.
     if (rhs.classifier)     construct_classifier(classifier_parameters);
