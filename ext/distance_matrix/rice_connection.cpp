@@ -7,3 +7,4 @@
             .define_method("count", &Connection::count)
             .define_method("fetch_id_and_type", &Connection::fetch_map<uint,string>)
             .define_method("instance", &Connection::instance);
+

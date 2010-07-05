@@ -47,3 +47,4 @@ FusionPhenomatrix::FusionPhenomatrix(uint id, const matrix_list& given_matrices)
     row_ids_    = extract_row_ids(given_matrices);
     column_ids_ = extract_column_ids(given_matrices);
 }
+

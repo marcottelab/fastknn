@@ -110,3 +110,4 @@ protected:
 };
 
 #endif // FUSION_PHENOMATRIX_H_
+

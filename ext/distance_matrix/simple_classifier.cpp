@@ -11,3 +11,4 @@ void SimpleClassifier::predict_column(pcolumn& ret, uint j) const {
     for (id_set::const_iterator it = nearest_j_obs.begin(); it != nearest_j_obs.end(); ++it)
         ret[*it] = 0.5;
 }
+
