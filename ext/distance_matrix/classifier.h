@@ -21,7 +21,7 @@ public:
         predict_column(ret, j);
 
         // Fill in the rest with 0s.
-        zero_fill_remainder(ret);
+        invert_and_fill_remainder(ret);
 
         return ret;
     }
@@ -45,10 +45,12 @@ protected:
         return iter;
     }
 
-    void zero_fill_remainder(pcolumn& ret) const {
-        // Fill in the rest with 0s.
-        for (id_set::const_iterator it = row_ids_.begin(); it != row_ids_.end(); ++it)
-            if (ret.find(*it) == ret.end()) ret[*it] = 0.0;
+    void invert_and_fill_remainder(pcolumn& ret) const {
+        // Fill in the rest with 1s.
+        for (id_set::const_iterator it = row_ids_.begin(); it != row_ids_.end(); ++it) {
+            if (ret.find(*it) == ret.end()) ret[*it] = 1.0;
+            else                            ret[*it] = 1.0 - ret[*it];
+        }
     }
 
 
