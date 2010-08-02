@@ -22,6 +22,7 @@ using std::make_pair;
 #include "connection.h"
 #include "typedefs.h"
 #include "hypergeometric.h"
+#include "similarity.h"
 #include "euclidean.h"
 #include "phenomatrix.h"
 
@@ -173,9 +174,11 @@ public:
 #ifdef RICE
     Rice::Object get_distance_function() const {
         std::map<double(*)(size_t,size_t,size_t,size_t), std::string> choices;
-        choices[&hypergeometric] = "hypergeometric";
-        choices[&euclidean]      = "euclidean";
-        choices[&manhattan]      = "manhattan";
+        choices[&hypergeometric]     = "hypergeometric";
+        choices[&euclidean]          = "euclidean";
+        choices[&manhattan]          = "manhattan";
+        choices[&jaccard]            = "jaccard";
+        choices[&hellinger]          = "hellinger";
 
         return Rice::Symbol(choices[distance_function]);
     }
@@ -199,6 +202,8 @@ protected:
         choices["hypergeometric"] = &hypergeometric;
         choices["euclidean"]      = &euclidean;
         choices["manhattan"]      = &manhattan;
+        choices["jaccard"]        = &jaccard;
+        choices["hellinger"]      = &hellinger;
 
         return choices[distance_measure];
     }

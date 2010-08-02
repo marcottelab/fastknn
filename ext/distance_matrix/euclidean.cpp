@@ -1,5 +1,9 @@
 #include "euclidean.h"
 
+uint unnormalized_manhattan(size_t m, size_t n, size_t k) {
+    return (m + n - 2*k);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // manhattan
 //
@@ -9,9 +13,10 @@
 // N, total possible items, does not matter for Manhattan.
 //
 // Returns a double representing the Euclidean distance between two vectors.
-// NOTE: Values in the vectors must be 1 or 0.
-double manhattan(size_t m, size_t n, size_t k, size_t N = 0) {
-    return (m - k) + (n - k);
+// This is equivalent to the hamming distance.
+// Normalizes by the total number of dimensions.
+double manhattan(size_t m, size_t n, size_t k, size_t N) {
+    return (unnormalized_manhattan(m,n,k)) / (double)(N);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -24,6 +29,6 @@ double manhattan(size_t m, size_t n, size_t k, size_t N = 0) {
 //
 // Returns a double representing the Euclidean distance between two vectors.
 // NOTE: Values in the vectors must be 1 or 0.
-double euclidean(size_t m, size_t n, size_t k, size_t N = 0) {
-    return sqrt(manhattan(m, n, k));
+double euclidean(size_t m, size_t n, size_t k, size_t N) {
+    return sqrt(unnormalized_manhattan(m, n, k)) / (double)(N);
 }
