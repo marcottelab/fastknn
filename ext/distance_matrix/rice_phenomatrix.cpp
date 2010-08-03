@@ -45,11 +45,11 @@ Data_Type<PhenomatrixPair> rb_cPhenomatrixPair =
         .define_method("distance", &PhenomatrixPair::distance)
         .define_method("tf_idf",
             &PhenomatrixPair::tf_idf,
-            (Arg("i"), Arg("j"), Arg("idf_threshold") = 0.0)
+            (Arg("i"), Arg("j"), Arg("idf_threshold") = (double)(0.0))
         )
         .define_method("inverse_document_frequency",
             &PhenomatrixPair::inverse_document_frequency,
-            (Arg("i"), Arg("threshold") = 0.0)
+            (Arg("i"), Arg("threshold") = (double)(0.0))
         )
         .define_method("nearest", &PhenomatrixPair::nearest)
         .define_method("min_genes", &PhenomatrixPair::min_genes)

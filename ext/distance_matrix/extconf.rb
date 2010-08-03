@@ -12,8 +12,8 @@ if RUBY_VERSION =~ /1.9/ then
   $CPPFLAGS += " -DRUBY_19"
 end
 
-$CPPFLAGS += " -DRICE"
-$CXXFLAGS += " -O3"
+$CPPFLAGS += " -DRICE -DNDEBUG"
+$CXXFLAGS += " -O3 -DNDEBUG"
 
 $objs = [
   "distance_matrix.o",

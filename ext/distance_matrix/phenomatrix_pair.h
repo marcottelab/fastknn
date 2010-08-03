@@ -154,11 +154,25 @@ public:
     double tf_idf(uint i, uint j, float idf_threshold = 0.0) const {
         if (total_term_count(i) == 0) return 0.0;
         if (source_matrix_has_column(j))
-            return inverse_document_frequency(i, idf_threshold) / (double)(s.back().observations_size(j));
+            return tf_idf_internal(i, j, s.back().observations_size(j), idf_threshold);
         else if (predict_matrix_has_column(j))
-            return inverse_document_frequency(i, idf_threshold) / (double)(p.top().observations_size(j));
+            return tf_idf_internal(i, j, p.top().observations_size(j), idf_threshold);
         else
             return 0.0;
+    }
+
+    // Return a TF-IDF sparse vector for some column (phenotype).
+    sparse_document_vector document_vector(uint j, float idf_threshold = 0.0) const {
+        id_set j_obs;
+        
+        if (predict_matrix_has_column(j))      j_obs = p.top().observations(j);
+        else                                   j_obs = s.back().observations(j);
+        
+        sparse_document_vector v(s.back().row_ids().size(), j_obs.size());
+        for (id_set::const_iterator it = j_obs.begin(); it != j_obs.end(); ++it)
+            v[*it] = tf_idf_internal(*it, j, j_obs.size(), idf_threshold);
+        
+        return v;
     }
 
 
@@ -251,6 +265,11 @@ public:
     void set_distance_threshold(float t) { distance_threshold_ = t; }
     float distance_threshold() const { return distance_threshold_; }
 protected:
+
+    // Calculate TF-IDF given some observations-size. Should only be used internally.
+    double tf_idf_internal(uint i, uint j, size_t obs_size, float idf_threshold) const {
+        return inverse_document_frequency(i, idf_threshold) / (double)(obs_size);
+    }
 
     // Returns a function pointer to a distance function based on a request made via
     // a string.

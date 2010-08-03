@@ -51,21 +51,11 @@ void PhenomatrixPair::knearest(proximity_queue& q, const uint& j, const size_t& 
 // Cosine similarity between the two matrices in pair p, using TF-IDF, and
 // treating both as a single corpus.
 double cosine_similarity(const PhenomatrixPair* const p, uint j1, uint j2, float threshold) {
-    double dot_product_accum = 0.0;
-    double p_magnitude_accum = 0.0;
-    double s_magnitude_accum = 0.0;
+    using boost::numeric::ublas::inner_prod;
+    sparse_document_vector v1 = p->document_vector(j1, threshold);
+    sparse_document_vector v2 = p->document_vector(j2, threshold);
 
-    id_set row_ids = p->row_ids();
-    for (id_set::const_iterator it = row_ids.begin(); it != row_ids.end(); ++it) {
-
-        double p_component = p->tf_idf(*it, j1), s_component = p->tf_idf(*it, j2);
-
-        dot_product_accum += p_component * s_component;
-        p_magnitude_accum += p_component * p_component;
-        s_magnitude_accum += s_component * s_component;
-    }
-
-    double sim = dot_product_accum / sqrt(p_magnitude_accum * s_magnitude_accum);
+    double sim = inner_prod(v1, v2) / sqrt(inner_prod(v1, v1) * inner_prod(v2, v2));
     if (sim > 1.0) return 0.0;
     else return 1.0 - sim;
 }

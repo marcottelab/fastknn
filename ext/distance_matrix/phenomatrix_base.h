@@ -2,6 +2,11 @@
 # define PHENOMATRIX_BASE_H_
 
 typedef unsigned int uint;
+#undef ALLOC // Needed for annoying bug (not in my code)
+#include <boost/numeric/ublas/vector_sparse.hpp>
+typedef boost::numeric::ublas::compressed_vector<double> sparse_document_vector;
+#undef ALLOC // Needed for annoying bug (not in my code)
+
 #ifdef RICE
 # include <rice/Object.hpp>
 # include <rice/Data_Type.hpp>
@@ -26,6 +31,7 @@ using std::cout;
 using std::endl;
 typedef boost::unordered_map<uint, std::set<uint> > omatrix;
 typedef boost::unordered_map<uint, size_t> gene_counter;
+
 
 
 
@@ -123,6 +129,17 @@ public:
         if (!has_row(i) || !has_column(j)) return 0.0;
         return inverse_document_frequency(i, idf_threshold) / (double)(observations_size(j));
     }
+
+
+    // Return a TF-IDF sparse vector for some column (phenotype).
+    sparse_document_vector document_vector(uint j, float idf_threshold = 0.0) const {
+        id_set j_obs = observations(j);
+        sparse_document_vector v(row_ids_.size(), j_obs.size());
+        for (id_set::const_iterator it = j_obs.begin(); it != j_obs.end(); ++it)
+            v[*it] = tf_idf(*it, j, idf_threshold);
+        return v;
+    }
+
 
     uint id() const { return id_; }
 
