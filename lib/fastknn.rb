@@ -4,7 +4,7 @@ $:.unshift(File.dirname(__FILE__)) unless
 require "distance_matrix.so"
 
 module Fastknn
-  VERSION = '0.0.7'
+  VERSION = '0.0.8'
 
   # Allow Phenomatrix types to be cached as string keys in a hash
   class PhenomatrixBase
@@ -84,7 +84,7 @@ module Fastknn
 
   # Automatically-called function connects to the database. In the future this needs
   # to be revised to take a connection string from Rails.
-  def self.connect dbstr = "host=draco.icmb.utexas.edu dbname=crossval_development user=jwoods password=youwish1"
+  def self.connect dbstr = "host=localhost dbname=crossval_development user=jwoods password=youwish1"
     @@c ||= Fastknn::Connection.new
     @@c.connect(dbstr)
     puts "Connected to database"

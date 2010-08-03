@@ -8,7 +8,6 @@
 #ifndef HYPERGEOMETRIC_H_
 # define HYPERGEOMETRIC_H_
 
-
 #include <boost/unordered_map.hpp>
 #include <algorithm>
 #include <cmath>
@@ -21,7 +20,6 @@ using std::string;
 using std::exp;
 using std::log;
 using std::vector;
-
 
 double factorial_stirling(const size_t&);
 double factorial_stirling(const double&);

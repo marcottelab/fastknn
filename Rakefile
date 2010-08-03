@@ -6,7 +6,7 @@ require 'rake/testtask'
 require 'hoe'
 
 PKG = "fastknn"
-PKG_VERSION = [0,0,7]
+PKG_VERSION = [0,0,8]
 AUTHOR = "John O. Woods, Marcotte Lab"
 EMAIL = "john.woods@marcottelab.org"
 HOMEPAGE = "http://github.com/MarcotteLabGit/fastknn"
@@ -26,6 +26,7 @@ spec = Hoe.spec PKG do |p|
   p.extra_deps << ["hoe", ">= 2.2.0"]
   p.extra_deps << ["test_benchmark", ">= 0.4.7"]
   p.extra_deps << ["rice", ">= 1.3.2"]
+  p.extra_deps << ["rake-compiler", ">= 0.7.0"]
 
   p.spec_extras[:files] = FileList['Rakefile', 'lib/fastknn.rb', 'test/*.rb', 'ext/**/*.cpp', 'ext/**/*.h'].to_a
 

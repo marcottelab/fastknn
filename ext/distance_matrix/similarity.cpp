@@ -7,6 +7,7 @@
 
 #include "similarity.h"
 
+
 ////////////////////////////////////////////////////////////////////////////////
 // jaccard
 //
@@ -21,6 +22,8 @@ double jaccard(size_t m, size_t n, size_t k, size_t N) {
     return (m + n - 2*k) / (double)(m + n - k);
 }
 
+
+// TODO: Check that this is the correct definition for hellinger.
 ////////////////////////////////////////////////////////////////////////////////
 // hellinger
 //

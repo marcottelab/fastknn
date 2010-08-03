@@ -11,6 +11,11 @@
 #include <stack>
 #include <list>
 #include <boost/foreach.hpp>
+#include <cmath>
+#include <vector>
+using std::vector;
+using std::log;
+using std::sqrt;
 using std::list;
 using std::stack;
 using std::cerr;
@@ -37,6 +42,16 @@ class PhenomatrixPair;
 typedef std::list<PhenomatrixPair>          matrix_list;
 #endif
 
+class PhenomatrixPair;
+
+double hypergeometric(const PhenomatrixPair* const, uint, uint, float);
+double manhattan(const PhenomatrixPair* const, uint, uint, float);
+double euclidean(const PhenomatrixPair* const, uint, uint, float);
+double cosine_similarity(const PhenomatrixPair* const, uint, uint, float);
+double tanimoto_coefficient(const PhenomatrixPair* const, uint, uint, float);
+double jaccard(const PhenomatrixPair* const, uint, uint, float);
+double hellinger(const PhenomatrixPair* const, uint, uint, float);
+
 // Handles creation of phenomatrices for pairs of species such that they have the
 // correct number of rows.
 //
@@ -55,20 +70,23 @@ public:
     PhenomatrixPair(uint id, PhenomatrixBase given_phenomatrix, size_t min_genes = 2)
     : s(create_phenomatrix_list(given_phenomatrix)),
       p(create_phenomatrix_stack(id, given_phenomatrix.id(), min_genes)),
-      distance_function(switch_distance_function("hypergeometric"))
+      distance_function(switch_distance_function("hypergeometric")),
+      distance_threshold_(0.0)
     { }
 
     PhenomatrixPair(uint id, uint given_id, size_t min_genes = 2)
     : s(create_phenomatrix_list(given_id, min_genes)),            // source species matrix
       p(create_phenomatrix_stack(id, given_id, min_genes)),       // predict species matrix
-      distance_function(switch_distance_function("hypergeometric"))
+      distance_function(switch_distance_function("hypergeometric")),
+      distance_threshold_(0.0)
     { }
 
     // Copy constructor
     PhenomatrixPair(const PhenomatrixPair& rhs)
     : s(rhs.s),
       p(rhs.p),
-      distance_function(rhs.distance_function)
+      distance_function(rhs.distance_function),
+      distance_threshold_(rhs.distance_threshold_)
     { }
 
     ~PhenomatrixPair() { }
@@ -102,13 +120,47 @@ public:
     // Return the distance, according to our distance function, between the two
     // columns.
     double distance(uint j1, uint j2) const {
-        size_t obs_j1 = p.top().observations_size(j1);
-        size_t obs_j2 = s.back().observations_size(j2);
-
-        if (obs_j1 == 0 || obs_j2 == 0) return MAX_DISTANCE;
-
-        return (*distance_function)( obs_j1, obs_j2, intersection(j1, j2).size(), max_intersection_size() );
+        return (*distance_function)( this, j1, j2, distance_threshold_ );
     }
+
+    pair<size_t,size_t> observations_sizes(uint j1, uint j2) const {
+        return make_pair<size_t,size_t>(p.top().observations_size(j1), s.back().observations_size(j2));
+    }
+
+    // Document count for TF-IDF when we consider the species pair to be the
+    // corpus (rather than each species as its own corpus).
+    size_t total_column_count() const {
+        return s.back().column_count() + p.top().column_count();
+    }
+
+    // Total term count for a given term, for TF-IDF, when we consider the species
+    // pair to be the corpus (rather than each species as its own corpus).
+    size_t total_term_count(uint i) const {
+        return s.back().term_count(i) + p.top().term_count(i);
+    }
+
+    // Inverse Document Frequency for TF-IDF. Discretizes: threshold, by default,
+    // is 0.0; but if you set it higher, everything that does not meet the threshold
+    // will be treated as 0.
+    double inverse_document_frequency(uint i, float idf_threshold = 0.0) const {
+        double idf = log( total_column_count() / (double)(total_term_count(i)) );
+        if (idf < idf_threshold) return 0.0;
+        else                     return idf;
+    }
+
+    // Calculate TF-IDF just based on this matrix for a given gene/phenotype.
+    // If the source and destination matrix are the same species, function will
+    // use the term frequency from the source matrix preferentially.
+    double tf_idf(uint i, uint j, float idf_threshold = 0.0) const {
+        if (total_term_count(i) == 0) return 0.0;
+        if (source_matrix_has_column(j))
+            return inverse_document_frequency(i, idf_threshold) / (double)(s.back().observations_size(j));
+        else if (predict_matrix_has_column(j))
+            return inverse_document_frequency(i, idf_threshold) / (double)(p.top().observations_size(j));
+        else
+            return 0.0;
+    }
+
 
     bool source_matrix_has_column(uint j) const {
         return s.back().has_column(j);
@@ -173,12 +225,14 @@ public:
 
 #ifdef RICE
     Rice::Object get_distance_function() const {
-        std::map<double(*)(size_t,size_t,size_t,size_t), std::string> choices;
+        std::map<double(*)(const PhenomatrixPair* const, uint, uint, float), std::string> choices;
         choices[&hypergeometric]     = "hypergeometric";
         choices[&euclidean]          = "euclidean";
         choices[&manhattan]          = "manhattan";
         choices[&jaccard]            = "jaccard";
         choices[&hellinger]          = "hellinger";
+        choices[&cosine_similarity]  = "cosine_similarity";
+        choices[&tanimoto_coefficient] = "tanimoto_coefficient";
 
         return Rice::Symbol(choices[distance_function]);
     }
@@ -193,17 +247,22 @@ public:
     void set_distance_function_str(const string& dfn) {
         distance_function = switch_distance_function(dfn);
     }
+
+    void set_distance_threshold(float t) { distance_threshold_ = t; }
+    float distance_threshold() const { return distance_threshold_; }
 protected:
 
     // Returns a function pointer to a distance function based on a request made via
     // a string.
-    static double (*switch_distance_function(const std::string& distance_measure))(size_t,size_t,size_t,size_t) {
-        std::map<std::string, double(*)(size_t,size_t,size_t,size_t)> choices;
-        choices["hypergeometric"] = &hypergeometric;
-        choices["euclidean"]      = &euclidean;
-        choices["manhattan"]      = &manhattan;
-        choices["jaccard"]        = &jaccard;
-        choices["hellinger"]      = &hellinger;
+    static double (*switch_distance_function(const std::string& distance_measure))(const PhenomatrixPair* const, uint, uint, float) {
+        std::map<std::string, double(*)(const PhenomatrixPair* const, uint, uint, float)> choices;
+        choices["hypergeometric"]       = &hypergeometric;
+        choices["euclidean"]            = &euclidean;
+        choices["manhattan"]            = &manhattan;
+        choices["jaccard"]              = &jaccard;
+        choices["hellinger"]            = &hellinger;
+        choices["cosine_similarity"]    = &cosine_similarity;
+        choices["tanimoto_coefficient"] = &tanimoto_coefficient;
 
         return choices[distance_measure];
     }
@@ -261,8 +320,10 @@ protected:
     stack<Phenomatrix> p;
 
     // Allow different distance functions to be subbed in.
-    double (*distance_function)(size_t, size_t, size_t, size_t);
+    double (*distance_function)(const PhenomatrixPair* const, uint, uint, float);
+    float distance_threshold_;
 };
+
 
 #ifndef MATRIX_LIST_DEFINED
 # define MATRIX_LIST_DEFINED

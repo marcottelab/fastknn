@@ -25,7 +25,7 @@ class TestPhenomatrixExtn < Test::Unit::TestCase
   end
 
   def test_parent_and_root_id
-    @@p193 ||= Fastknn::PhenomatrixBase.new(199)
+    @@p193 ||= Fastknn::PhenomatrixBase.new(199, true, 2)
     assert @@p193.parent_id == 193
     assert @@p.root_id == 185
   end

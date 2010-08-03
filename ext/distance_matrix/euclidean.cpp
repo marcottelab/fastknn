@@ -1,6 +1,7 @@
 #include "euclidean.h"
 
-uint unnormalized_manhattan(size_t m, size_t n, size_t k) {
+
+unsigned int unnormalized_manhattan(size_t m, size_t n, size_t k) {
     return (m + n - 2*k);
 }
 

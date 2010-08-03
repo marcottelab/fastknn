@@ -13,6 +13,7 @@
 
 using std::sqrt;
 
+unsigned int unnormalized_manhattan(size_t, size_t, size_t);
 double manhattan(size_t, size_t, size_t, size_t);
 double euclidean(size_t, size_t, size_t, size_t);
 #endif	/* EUCLIDEAN_H_ */

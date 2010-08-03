@@ -10,6 +10,8 @@ typedef unsigned int uint;
 #include <map>
 #include <queue>
 #include <iostream>
+#include <cmath>
+using std::log;
 using std::map;
 using std::queue;
 //#include <boost/numeric/ublas/matrix_sparse.hpp>
@@ -23,6 +25,7 @@ using std::cerr;
 using std::cout;
 using std::endl;
 typedef boost::unordered_map<uint, std::set<uint> > omatrix;
+typedef boost::unordered_map<uint, size_t> gene_counter;
 
 
 
@@ -55,7 +58,8 @@ public:
       parent_id_(rhs.parent_id_),
       child_ids_(rhs.child_ids_),
       type_(rhs.type_),
-      obs(copy_construct_omatrix(rhs))
+      obs(copy_construct_omatrix(rhs)),
+      gcount(rhs.gcount)
     { }
 
     PhenomatrixBase(const PhenomatrixBase& rhs, const id_set& remove_rows)
@@ -67,7 +71,8 @@ public:
       parent_id_(rhs.parent_id_),
       child_ids_(rhs.child_ids_), // not safe to use!
       type_(rhs.type_),
-      obs(copy_construct_omatrix(rhs, remove_rows))
+      obs(copy_construct_omatrix(rhs, remove_rows)),
+      gcount(rhs.gcount)
     { }
 
     virtual ~PhenomatrixBase() { }
@@ -92,8 +97,32 @@ public:
 
     // Returns the number of columns in the fully-loaded matrix -- may be different
     // than expected if this is a mask.
+    // This may also used as the number of documents for TF-IDF.
     size_t column_count() const { return obs.size(); }
 
+    // Returns the number of times some gene is found in the matrix. Does not
+    // take into account any masks that might have been pushed, since this is
+    // just for TF-IDF.
+    size_t term_count(uint i) const {
+        gene_counter::const_iterator it = gcount.find(i);
+        if (it == gcount.end())  return 0;
+        else                     return it->second;
+    }
+
+    // Inverse Document Frequency for TF-IDF. Discretizes: threshold, by default,
+    // is 0.0; but if you set it higher, everything that does not meet the threshold
+    // will be treated as 0.
+    double inverse_document_frequency(uint i, float idf_threshold = 0.0) const {
+        double idf = log( column_count() / (double)(term_count(i)) );
+        if (idf < idf_threshold) return 0.0;
+        else                     return idf;
+    }
+
+    // Calculate TF-IDF just based on this matrix for a given gene/phenotype.
+    double tf_idf(uint i, uint j, float idf_threshold = 0.0) const {
+        if (!has_row(i) || !has_column(j)) return 0.0;
+        return inverse_document_frequency(i, idf_threshold) / (double)(observations_size(j));
+    }
 
     uint id() const { return id_; }
 
@@ -200,10 +229,13 @@ protected:
     void inherit_construct(size_t min_genes) {
         // Get matrix attributes
         row_ids_ = fetch_row_ids();
-        // column_ids_ = fetch_column_ids();
+        // column_ids_ = fetch_column_ids(); // Now set by enforce_min_genes
 
         // Create the observation matrix
         obs = omatrix(fetch_column_count());
+
+        // Create the index giving the number of phenotypes where a gene appears
+        gcount = gene_counter(row_ids_.size());
         
         load_matrix();
 
@@ -219,10 +251,16 @@ protected:
         queue<omatrix::const_iterator> erase_q;
 
         for (omatrix::iterator it = obs.begin(); it != obs.end(); ++it) {
-            if (it->second.size() >= min_genes)
+            if (it->second.size() >= min_genes) {
                 column_ids_.insert(it->first);
-            else
-                erase_q.push(it);
+
+                // Walk through and increment gcount for each gene found.
+                for (std::set<uint>::const_iterator gt = it->second.begin(); gt != it->second.end(); ++gt) {
+                    if (gcount.find(*gt) == gcount.end())   gcount[*gt] = 1;
+                    else                                    gcount[*gt]++;
+                }
+
+            } else erase_q.push(it);
         }
 
         // Remove columns from obs that are below the threshold
@@ -472,7 +510,7 @@ protected:
 
 
     // COPY CONSTRUCTION HELPERS
-    static omatrix copy_construct_omatrix(const PhenomatrixBase& rhs) { //HERE
+    static omatrix copy_construct_omatrix(const PhenomatrixBase& rhs) {
         return omatrix(rhs.obs);
     }
 
@@ -516,7 +554,10 @@ protected:
     map<uint,string> child_ids_;
     string type_;
 
-    omatrix obs; // set of observations indexed by column
+    omatrix obs;            // set of observations indexed by column
+    
+    gene_counter gcount;    // Count of observations indexed by row (for tf-idf)
+                            // Note that gcount does not change when the matrix is masked!
 };
 
 #endif // PHENOMATRIX_H_

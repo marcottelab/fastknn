@@ -47,3 +47,88 @@ void PhenomatrixPair::knearest(proximity_queue& q, const uint& j, const size_t& 
     }
 }
 
+
+// Cosine similarity between the two matrices in pair p, using TF-IDF, and
+// treating both as a single corpus.
+double cosine_similarity(const PhenomatrixPair* const p, uint j1, uint j2, float threshold) {
+    double dot_product_accum = 0.0;
+    double p_magnitude_accum = 0.0;
+    double s_magnitude_accum = 0.0;
+
+    id_set row_ids = p->row_ids();
+    for (id_set::const_iterator it = row_ids.begin(); it != row_ids.end(); ++it) {
+
+        double p_component = p->tf_idf(*it, j1), s_component = p->tf_idf(*it, j2);
+
+        dot_product_accum += p_component * s_component;
+        p_magnitude_accum += p_component * p_component;
+        s_magnitude_accum += s_component * s_component;
+    }
+
+    double sim = dot_product_accum / sqrt(p_magnitude_accum * s_magnitude_accum);
+    if (sim > 1.0) return 0.0;
+    else return 1.0 - sim;
+}
+
+// Tanimoto coefficient between the two matrices in pair p, using TF-IDF, and
+// treating both as a single corpus.
+double tanimoto_coefficient(const PhenomatrixPair* const p, uint j1, uint j2, float threshold) {
+    double dot_product_accum = 0.0;
+    double p_magnitude_accum = 0.0;
+    double s_magnitude_accum = 0.0;
+
+    for (id_set::const_iterator it = p->row_ids().begin(); it != p->row_ids().end(); ++it) {
+
+        double p_component = p->tf_idf(*it, j1), s_component = p->tf_idf(*it, j2);
+
+        dot_product_accum += p_component * s_component;
+        p_magnitude_accum += p_component * p_component;
+        s_magnitude_accum += s_component * s_component;
+    }
+
+    double sim = dot_product_accum / (p_magnitude_accum + s_magnitude_accum - dot_product_accum);
+    if (sim > 1.0) return 0.0;
+    else return 1.0 - sim;
+}
+
+
+double jaccard(const PhenomatrixPair* const p, uint j1, uint j2, float threshold) {
+    pair<size_t,size_t> obs_j1_j2 = p->observations_sizes(j1,j2);
+    if (obs_j1_j2.first == 0 || obs_j1_j2.second == 0) return 1.0;
+
+    return jaccard(obs_j1_j2.first, obs_j1_j2.second, p->intersection(j1,j2).size(), p->max_intersection_size() );
+}
+
+
+double hellinger(const PhenomatrixPair* const p, uint j1, uint j2, float threshold) {
+    pair<size_t,size_t> obs_j1_j2 = p->observations_sizes(j1,j2);
+    if (obs_j1_j2.first == 0 || obs_j1_j2.second == 0) return 1.0;
+
+    return hellinger(obs_j1_j2.first, obs_j1_j2.second, p->intersection(j1,j2).size(), p->max_intersection_size() );
+}
+
+// Exposes manhattan(m,n,k,N) and PhenomatrixPair to eachother.
+double manhattan(const PhenomatrixPair* const p, uint j1, uint j2, float threshold) {
+    pair<size_t,size_t> obs_j1_j2 = p->observations_sizes(j1,j2);
+    if (obs_j1_j2.first == 0 || obs_j1_j2.second == 0) return 1.0;
+
+    return manhattan(obs_j1_j2.first, obs_j1_j2.second, p->intersection(j1,j2).size(), p->max_intersection_size() );
+}
+
+// Exposes euclidean(m,n,k,N) and PhenomatrixPair to eachother.
+double euclidean(const PhenomatrixPair* const p, uint j1, uint j2, float threshold) {
+    pair<size_t,size_t> obs_j1_j2 = p->observations_sizes(j1,j2);
+    if (obs_j1_j2.first == 0 || obs_j1_j2.second == 0) return 1.0;
+
+    return euclidean(obs_j1_j2.first, obs_j1_j2.second, p->intersection(j1,j2).size(), p->max_intersection_size() );
+}
+
+// Exposes hypergeometric(m,n,k,N) and PhenomatrixPair to eachother.
+// Each distance function should have something like this -- and it's important
+// that it have exactly these arguments.
+double hypergeometric(const PhenomatrixPair* const p, uint j1, uint j2, float threshold) {
+    std::pair<size_t,size_t> obs_j1_j2 = p->observations_sizes(j1,j2);
+    if (obs_j1_j2.first == 0 || obs_j1_j2.second == 0) return 1.0;
+
+    return hypergeometric(obs_j1_j2.first, obs_j1_j2.second, p->intersection(j1,j2).size(), p->max_intersection_size() );
+}
