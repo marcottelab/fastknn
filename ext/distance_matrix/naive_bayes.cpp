@@ -1,11 +1,13 @@
 #include "classifier.h"
 
 
-NaiveBayes::NaiveBayes(const DistanceMatrix* const rhs, size_t k_, float max_distance_)
-        : Classifier(rhs), k(k_), max_distance(max_distance_) { }
+NaiveBayes::NaiveBayes(const DistanceMatrix* const rhs, size_t k_, float max_distance_, float distance_exponent_)
+        : Classifier(rhs), k(k_), max_distance(max_distance_), distance_exponent(distance_exponent_) { }
 
 // Note that this function considers 0 to be the best score. It will be inverted
 // later.
+// Classifier does not take into account min_idf in its integration. This value
+// only affects the actual "distance" calculation, not predictions.
 void NaiveBayes::predict_column(pcolumn& ret, uint j) const {
     // Get the k-nearest columns
     proximity_queue q = d->knearest(j, k, (double)(max_distance));
@@ -30,7 +32,7 @@ void NaiveBayes::predict_column(pcolumn& ret, uint j) const {
 
             // THIS IS THE ACTUAL NAIVE BAYES FORMULA!
             // (inside the Mult operator)
-            float score_mod = (1.0 - masked_intersection_over_total * (1.0 - kth_j2.distance));
+            float score_mod = (1.0 - masked_intersection_over_total * (1.0 - std::pow(kth_j2.distance, (double)(distance_exponent) )));
 
             if (ret_it == ret.end()) ret[*it] = score_mod;         // insert
             else                     ret_it->second *= score_mod;  // multiply

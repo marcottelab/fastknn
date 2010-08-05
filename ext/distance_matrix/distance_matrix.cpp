@@ -87,7 +87,7 @@ void DistanceMatrix::construct_classifier(const classifier_params& classifier_pa
     
     classifier_parameters = classifier_params;
     if (classifier_params.classifier == "naivebayes")
-        classifier = new NaiveBayes(this, classifier_params.k, classifier_params.max_distance);
+        classifier = new NaiveBayes(this, classifier_params.k, classifier_params.max_distance, classifier_params.distance_exponent);
     else if (classifier_params.classifier == "simple")
         classifier = new SimpleClassifier(this);
     else {

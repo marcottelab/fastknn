@@ -1,6 +1,8 @@
 #ifndef CLASSIFIER_H_
 # define CLASSIFIER_H_
 
+#include <cmath> // for std::pow(base, exp)
+
 #include "typedefs.h"
 #include "distance_matrix.h"
 
@@ -70,12 +72,13 @@ protected:
 
 class NaiveBayes : public Classifier {
 public:
-    NaiveBayes(const DistanceMatrix* const rhs, size_t k_, float max_distance_);
+    NaiveBayes(const DistanceMatrix* const, size_t, float, float);
     virtual ~NaiveBayes() { }
 protected:
     virtual void predict_column(pcolumn& ret, uint j) const;
     size_t k;
     float max_distance;
+    float distance_exponent;
 };
 
 

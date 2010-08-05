@@ -10,17 +10,17 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
     STDERR.puts "TestDistanceMatrixExtn"
     # Predicting human
     @@d ||= Fastknn.fetch_distance_matrix(185, [3], 2)
-    @@d.classifier = {:classifier => :naivebayes, :k => 10, :max_distance => 1}
+    @@d.classifier = {:classifier => :naivebayes, :k => 10, :max_distance => 1, :distance_exponent => 1}
     @@d.distance_function = :hypergeometric
 
     d4 ||= Fastknn.fetch_distance_matrix(185, [3], 4)
-    d4.classifier = {:classifier => :naivebayes, :k => 10, :max_distance => 1}
+    d4.classifier = {:classifier => :naivebayes, :k => 10, :max_distance => 1, :distance_exponent => 1}
     d4.distance_function = :hypergeometric
 
     
     # Predicting plant
     @@dat ||= Fastknn.fetch_distance_matrix(247, [253,257], 2)
-    @@dat.classifier = {:classifier => :naivebayes, :k => 10, :max_distance => 1}
+    @@dat.classifier = {:classifier => :naivebayes, :k => 10, :max_distance => 1, :distance_exponent => 1}
     @@dat.distance_function = :hypergeometric
 
     @@predict_matrix ||= Fastknn.fetch_predict_matrix(247,247, 2)

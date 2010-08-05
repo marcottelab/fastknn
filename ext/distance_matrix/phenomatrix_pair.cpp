@@ -8,7 +8,7 @@ PhenomatrixPair::PhenomatrixPair(Rice::Object self, Rice::Object predict_or_id, 
 : s(create_phenomatrix_list(source_or_id, min_genes)),
   p(create_phenomatrix_stack(predict_or_id, s.back().id(), min_genes)),
   distance_function(switch_distance_function("hypergeometric")),
-  distance_threshold_(0.0)
+  min_idf_(0.0)
 { }
 #endif
 
@@ -16,7 +16,7 @@ PhenomatrixPair::PhenomatrixPair(uint id, PhenomatrixBase given_phenomatrix, siz
 : s(create_phenomatrix_list(given_phenomatrix)),
   p(create_phenomatrix_stack(id, given_phenomatrix.id(), min_genes)),
   distance_function(switch_distance_function("hypergeometric")),
-  distance_threshold_(0.0)
+  min_idf_(0.0)
 { }
 
 
@@ -96,6 +96,7 @@ id_set PhenomatrixPair::intersection(uint j1, uint j2) const {
                       std::insert_iterator<id_set>(ret,ret.begin()));
     return ret;
 }
+
 
 size_t PhenomatrixPair::max_intersection_size() const {
     return s.back().row_count();
@@ -242,18 +243,48 @@ double tanimoto_coefficient(const PhenomatrixPair* const p, uint j1, uint j2) {
 
 
 double jaccard(const PhenomatrixPair* const p, uint j1, uint j2) {
-    pair<size_t,size_t> obs_j1_j2 = p->observations_sizes(j1,j2);
+    std::pair<size_t,size_t> obs_j1_j2 = p->observations_sizes(j1,j2);
     if (obs_j1_j2.first == 0 || obs_j1_j2.second == 0) return 1.0;
 
-    return jaccard(obs_j1_j2.first, obs_j1_j2.second, p->intersection(j1,j2).size(), p->max_intersection_size() );
+    if (p->min_idf() <= 0.0)
+        // Simple: No idf threshold set, just go ahead and use the actual matrix.
+        return jaccard(obs_j1_j2.first, obs_j1_j2.second, p->intersection(j1,j2).size(), p->max_intersection_size() );
+
+
+    else {
+
+        // Less simple: idf_threshold > 0.0. Compute document vectors and use those
+        // as matrix instead.
+        using boost::numeric::ublas::element_prod;
+
+        tuple<size_t,size_t,size_t> mnk = sparse_drawn_defective_nnz( p->document_vectors(j1, j2) );
+        if (mnk.get<0>() == 0 || mnk.get<1>() == 0 || mnk.get<2>() == 0) return 1.0;
+
+        return jaccard(mnk.get<0>(), mnk.get<1>(), mnk.get<2>(), p->max_intersection_size() );
+    }
 }
 
 
-double hellinger(const PhenomatrixPair* const p, uint j1, uint j2) {
-    pair<size_t,size_t> obs_j1_j2 = p->observations_sizes(j1,j2);
+double sorensen(const PhenomatrixPair* const p, uint j1, uint j2) {
+    std::pair<size_t,size_t> obs_j1_j2 = p->observations_sizes(j1,j2);
     if (obs_j1_j2.first == 0 || obs_j1_j2.second == 0) return 1.0;
 
-    return hellinger(obs_j1_j2.first, obs_j1_j2.second, p->intersection(j1,j2).size(), p->max_intersection_size() );
+    if (p->min_idf() <= 0.0)
+        // Simple: No idf threshold set, just go ahead and use the actual matrix.
+        return sorensen(obs_j1_j2.first, obs_j1_j2.second, p->intersection(j1,j2).size(), p->max_intersection_size() );
+
+
+    else {
+
+        // Less simple: idf_threshold > 0.0. Compute document vectors and use those
+        // as matrix instead.
+        using boost::numeric::ublas::element_prod;
+
+        tuple<size_t,size_t,size_t> mnk = sparse_drawn_defective_nnz( p->document_vectors(j1, j2) );
+        if (mnk.get<0>() == 0 || mnk.get<1>() == 0 || mnk.get<2>() == 0) return 1.0;
+
+        return sorensen(mnk.get<0>(), mnk.get<1>(), mnk.get<2>(), p->max_intersection_size() );
+    }
 }
 
 // Exposes manhattan(m,n,k,N) and PhenomatrixPair to eachother.
@@ -285,8 +316,52 @@ double euclidean(const PhenomatrixPair* const p, uint j1, uint j2) {
 // Each distance function should have something like this -- and it's important
 // that it have exactly these arguments.
 double hypergeometric(const PhenomatrixPair* const p, uint j1, uint j2) {
+    
     std::pair<size_t,size_t> obs_j1_j2 = p->observations_sizes(j1,j2);
     if (obs_j1_j2.first == 0 || obs_j1_j2.second == 0) return 1.0;
+    
+    if (p->min_idf() <= 0.0)
+        // Simple: No idf threshold set, just go ahead and use the actual matrix.
+        return hypergeometric(obs_j1_j2.first, obs_j1_j2.second, p->intersection(j1,j2).size(), p->max_intersection_size() );
 
-    return hypergeometric(obs_j1_j2.first, obs_j1_j2.second, p->intersection(j1,j2).size(), p->max_intersection_size() );
+    
+    else {
+
+        // Less simple: idf_threshold > 0.0. Compute document vectors and use those
+        // as matrix instead.
+        using boost::numeric::ublas::element_prod;
+        
+        tuple<size_t,size_t,size_t> mnk = sparse_drawn_defective_nnz( p->document_vectors(j1, j2) );
+        if (mnk.get<0>() == 0 || mnk.get<1>() == 0 || mnk.get<2>() == 0) return 1.0;
+
+        return hypergeometric(mnk.get<0>(), mnk.get<1>(), mnk.get<2>(), p->max_intersection_size() );
+    }
+}
+
+
+size_t nnz(const sparse_document_vector& v) {
+    size_t res = 0;
+    for (sparse_document_vector::const_iterator it = v.begin(); it != v.end(); ++it)
+        if (*it != 0.0) res++;
+
+    return res;
+}
+
+tuple<size_t, size_t, size_t> sparse_drawn_defective_nnz(const sparse_document_vectors& v1v2) {
+    size_t m = 0, n = 0, k = 0;
+    // TODO: Speed this up by writing my own iterator, possibly?
+    sparse_document_vector v_sum(v1v2.first + v1v2.second);
+    for (sparse_document_vector::const_iterator it = v_sum.begin(); it != v_sum.end(); ++it) {
+        if (v1v2.first[it.index()] != 0.0) {
+            m++;
+            if (v1v2.second[it.index()] != 0.0) {
+                n++;
+                k++;
+            }
+        } else {
+            if (v1v2.second[it.index()] == 0.0) throw; // REMOVE THIS IF IT WORKS ONCE.
+            n++;
+        }
+    }
+    return make_tuple(m, n, k);
 }

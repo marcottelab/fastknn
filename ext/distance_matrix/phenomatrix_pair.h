@@ -13,6 +13,7 @@
 #include <boost/foreach.hpp>
 #include <cmath>
 #include <vector>
+#include <boost/tuple/tuple.hpp>
 using std::vector;
 using std::log;
 using std::sqrt;
@@ -22,6 +23,8 @@ using std::cerr;
 using std::endl;
 using std::pair;
 using std::make_pair;
+using boost::tuples::tuple;
+using boost::tuples::make_tuple;
 
 #include "id_dist.h"
 #include "connection.h"
@@ -50,13 +53,15 @@ typedef std::list<PhenomatrixPair>          matrix_list;
 
 class PhenomatrixPair;
 
+tuple<size_t, size_t, size_t> sparse_drawn_defective_nnz(const sparse_document_vectors&);
+
 double hypergeometric(const PhenomatrixPair* const, uint, uint);
 double manhattan(const PhenomatrixPair* const, uint, uint);
 double euclidean(const PhenomatrixPair* const, uint, uint);
 double cosine_similarity(const PhenomatrixPair* const, uint, uint);
 double tanimoto_coefficient(const PhenomatrixPair* const, uint, uint);
 double jaccard(const PhenomatrixPair* const, uint, uint);
-double hellinger(const PhenomatrixPair* const, uint, uint);
+double sorensen(const PhenomatrixPair* const, uint, uint);
 
 // Handles creation of phenomatrices for pairs of species such that they have the
 // correct number of rows.
@@ -75,7 +80,7 @@ public:
     : s(create_phenomatrix_list(given_id, min_genes)),            // source species matrix
       p(create_phenomatrix_stack(id, given_id, min_genes)),       // predict species matrix
       distance_function(switch_distance_function("hypergeometric")),
-      distance_threshold_(0.0)
+      min_idf_(0.0)
     { }
 
     // Copy constructor
@@ -83,7 +88,7 @@ public:
     : s(rhs.s),
       p(rhs.p),
       distance_function(rhs.distance_function),
-      distance_threshold_(rhs.distance_threshold_)
+      min_idf_(rhs.min_idf_)
     { }
 
     ~PhenomatrixPair() { }
@@ -95,7 +100,7 @@ public:
 
 
     // Return the distance, according to our distance function, between the two
-    // columns. distance_threshold_ is probably only going to apply to distance
+    // columns. min_idf_ is probably only going to apply to distance
     // measures that utilize tf-idf (it's the idf threshold).
     double distance(uint j1, uint j2) const {
         return (*distance_function)( this, j1, j2 );
@@ -110,12 +115,12 @@ public:
     // will be treated as 0.
     double inverse_document_frequency(uint i) const {
         double idf = log( total_column_count() / (double)(total_term_count(i)) );
-        if (idf < distance_threshold_) {
-            //cerr << "phenomatrix_pair.h: inverse_document_frequency(i): distance_threshold_ = " << distance_threshold_ << "; returning 0" << endl;
+        if (idf < min_idf_) {
+            //cerr << "phenomatrix_pair.h: inverse_document_frequency(i): min_idf_ = " << min_idf_ << "; returning 0" << endl;
             return 0.0;
         }
         else {
-            //cerr << "phenomatrix_pair.h: inverse_document_frequency(i): distance_threshold_ = " << distance_threshold_ << "; returning idf = " << idf << endl;
+            //cerr << "phenomatrix_pair.h: inverse_document_frequency(i): min_idf_ = " << min_idf_ << "; returning idf = " << idf << endl;
             return idf;
         }
     }
@@ -161,9 +166,9 @@ public:
         choices[&euclidean]          = "euclidean";
         choices[&manhattan]          = "manhattan";
         choices[&jaccard]            = "jaccard";
-        choices[&hellinger]          = "hellinger";
-        choices[&cosine_similarity]  = "cosine_similarity";
-        choices[&tanimoto_coefficient] = "tanimoto_coefficient";
+        choices[&sorensen]           = "sorensen";
+        choices[&cosine_similarity]  = "cosine";
+        choices[&tanimoto_coefficient] = "tanimoto";
 
         return Rice::Symbol(choices[distance_function]);
     }
@@ -179,8 +184,8 @@ public:
         distance_function = switch_distance_function(dfn);
     }
 
-    void set_distance_threshold(float t) { distance_threshold_ = t; }
-    float distance_threshold() const { return distance_threshold_; }
+    void set_min_idf(float t) { min_idf_ = t; }
+    float min_idf() const { return min_idf_; }
 protected:
 
     // Calculate TF-IDF given some observations-size. Should only be used internally.
@@ -196,9 +201,9 @@ protected:
         choices["euclidean"]            = &euclidean;
         choices["manhattan"]            = &manhattan;
         choices["jaccard"]              = &jaccard;
-        choices["hellinger"]            = &hellinger;
-        choices["cosine_similarity"]    = &cosine_similarity;
-        choices["tanimoto_coefficient"] = &tanimoto_coefficient;
+        choices["sorensen"]             = &sorensen;
+        choices["cosine"]               = &cosine_similarity;
+        choices["tanimoto"]             = &tanimoto_coefficient;
 
         return choices[distance_measure];
     }
@@ -216,7 +221,7 @@ protected:
 
     // Allow different distance functions to be subbed in.
     double (*distance_function)(const PhenomatrixPair* const, uint, uint);
-    float distance_threshold_;
+    float min_idf_;
 };
 
 

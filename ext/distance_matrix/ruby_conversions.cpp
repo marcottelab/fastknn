@@ -97,10 +97,12 @@ classifier_params from_ruby<classifier_params>(Object x) {
     const Symbol CLASSIFIER_S("classifier");
     const Symbol K_S("k");
     const Symbol MAX_DISTANCE_S("max_distance");
+    const Symbol DISTANCE_EXPONENT_S("distance_exponent");
 
     classifier_params p(  from_ruby<Symbol>(hash[ CLASSIFIER_S ]).str() );
     p.k                 = from_ruby<uint>( hash[ K_S ]);
     p.max_distance      = from_ruby<float>( hash[ MAX_DISTANCE_S ] );
+    p.distance_exponent = from_ruby<float>( hash[ DISTANCE_EXPONENT_S ] );
 
     return p;
 }

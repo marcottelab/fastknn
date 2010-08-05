@@ -53,5 +53,5 @@ Data_Type<PhenomatrixPair> rb_cPhenomatrixPair =
         .define_method("pop_mask", &PhenomatrixPair::pop_mask)
         .define_method("distance_function=", &PhenomatrixPair::set_distance_function)
         .define_method("distance_function", &PhenomatrixPair::get_distance_function)
-        .define_method("distance_threshold=", &PhenomatrixPair::set_distance_threshold)
-        .define_method("distance_threshold", &PhenomatrixPair::distance_threshold);
+        .define_method("min_idf=", &PhenomatrixPair::set_min_idf)
+        .define_method("min_idf", &PhenomatrixPair::min_idf);

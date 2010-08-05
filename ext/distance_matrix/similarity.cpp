@@ -35,6 +35,6 @@ double jaccard(size_t m, size_t n, size_t k, size_t N) {
 // Returns a double representing the Hellinger distance (1.0 - Sorenson index)
 // of two sets.
 // Like Jaccard distance, this doesn't care about the total number of genes!
-double hellinger(size_t m, size_t n, size_t k, size_t N) {
+double sorensen(size_t m, size_t n, size_t k, size_t N) {
     return 1.0 - ((2*k) / (double)(m+n));
 }

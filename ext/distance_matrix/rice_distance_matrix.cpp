@@ -9,8 +9,8 @@
             .define_method("distance", &DistanceMatrix::distance)
             .define_method("distance_function=", &DistanceMatrix::set_distance_function)
             .define_method("distance_functions", &DistanceMatrix::get_distance_functions)
-            .define_method("distance_threshold=", &DistanceMatrix::set_distance_threshold)
-            .define_method("distance_thresholds", &DistanceMatrix::distance_thresholds)
+            .define_method("min_idf=", &DistanceMatrix::set_min_idf)
+            .define_method("min_idfs", &DistanceMatrix::min_idfs)
             .define_method("knearest", &DistanceMatrix::knearest,
                            ( Arg("j"),
                              Arg("k") = (uint)(1),

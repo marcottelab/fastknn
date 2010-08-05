@@ -11,5 +11,5 @@
 typedef unsigned int size_t;
 
 double jaccard(size_t, size_t, size_t, size_t);
-double hellinger(size_t, size_t, size_t, size_t);
+double sorensen(size_t, size_t, size_t, size_t);
 #endif

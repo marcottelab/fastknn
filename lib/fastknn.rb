@@ -4,7 +4,7 @@ $:.unshift(File.dirname(__FILE__)) unless
 require "distance_matrix.so"
 
 module Fastknn
-  VERSION = '0.0.9'
+  VERSION = '0.0.10'
 
   # Allow Phenomatrix types to be cached as string keys in a hash
   class PhenomatrixBase

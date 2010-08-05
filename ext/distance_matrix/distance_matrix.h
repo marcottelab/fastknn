@@ -86,16 +86,16 @@ public:
 
 
     // Sets the [idf] threshold for TF-IDF on each matrix pair.
-    void set_distance_threshold(float t) {
+    void set_min_idf(float t) {
         BOOST_FOREACH( PhenomatrixPair& source_pair, source_matrices ) {
-            source_pair.set_distance_threshold(t);
+            source_pair.set_min_idf(t);
         }
     }
 #ifdef RICE
-    Rice::Object distance_thresholds() {
+    Rice::Object min_idfs() {
         Rice::Hash h;
         BOOST_FOREACH(const PhenomatrixPair& source_pair, source_matrices) {
-            h[ to_ruby<uint>(source_pair.id()) ] = to_ruby<float>(source_pair.distance_threshold());
+            h[ to_ruby<uint>(source_pair.id()) ] = to_ruby<float>(source_pair.min_idf());
         }
         return h;
     }
