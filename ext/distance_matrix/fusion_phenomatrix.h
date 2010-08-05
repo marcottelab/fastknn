@@ -1,7 +1,7 @@
 #ifndef FUSION_PHENOMATRIX_H_
 # define FUSION_PHENOMATRIX_H_
 
-#include "phenomatrix_base.h"
+#include "phenomatrix.h"
 
 #include <sstream>
 #include <string>

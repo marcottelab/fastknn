@@ -138,3 +138,12 @@ pcolumn from_ruby<pcolumn>(Object x) {
     return xmap;
 }
 
+
+template <>
+Object to_ruby<sparse_document_vector>(sparse_document_vector const & d) {
+    Hash h;
+    for (sparse_document_vector::const_iterator i = d.begin(); i != d.end(); ++i) {
+        h[to_ruby<uint>(i.index())] = to_ruby<double>(*i);
+    }
+    return h;
+}

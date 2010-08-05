@@ -18,9 +18,9 @@ $CXXFLAGS += " -O3 -DNDEBUG"
 $objs = [
   "distance_matrix.o",
   "hypergeometric.o",
-  "euclidean.o",
   "classifier.o",
   "simple_classifier.o",
+  "phenomatrix.o",
   "phenomatrix_pair.o",
   "connection.o",
   "id_dist.o",

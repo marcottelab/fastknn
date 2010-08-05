@@ -6,7 +6,7 @@ require 'rake/testtask'
 require 'hoe'
 
 PKG = "fastknn"
-PKG_VERSION = [0,0,8]
+PKG_VERSION = [0,0,9]
 AUTHOR = "John O. Woods, Marcotte Lab"
 EMAIL = "john.woods@marcottelab.org"
 HOMEPAGE = "http://github.com/MarcotteLabGit/fastknn"
@@ -32,7 +32,10 @@ spec = Hoe.spec PKG do |p|
 
   p.description =<<EOF
 Fastknn is a C++-implemented Ruby module for k-nearest neighbors
-analyses, providing for multi-stage cross-validation.
+analyses, providing for multi-stage cross-validation. Includes
+a number of classifiers, including hypergeometric, and a bunch
+that use TF-IDF such as cosine similarity and Tanimoto co-
+efficient.
 EOF
 end
 

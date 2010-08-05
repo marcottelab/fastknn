@@ -14,10 +14,6 @@ Data_Type<PhenomatrixBase> rb_cPhenomatrixBase =
         .define_method("column_ids", &PhenomatrixBase::column_ids)
         .define_method("child_ids", &PhenomatrixBase::child_ids)
         .define_method("child_row_ids", &PhenomatrixBase::child_row_ids)
-        .define_method("tf_idf",
-            &PhenomatrixBase::tf_idf,
-            (Arg("i"), Arg("j"), Arg("idf_threshold") = 0.0)
-        )
         .define_method("inverse_document_frequency",
             &PhenomatrixBase::inverse_document_frequency,
             (Arg("i"), Arg("threshold") = 0.0)
@@ -39,18 +35,14 @@ Data_Type<PhenomatrixPair> rb_cPhenomatrixPair =
         define_class_under<PhenomatrixPair>(rb_mFastknn, "PhenomatrixPair")
         .define_constructor(Constructor<PhenomatrixPair, Object, Object, Object, size_t>())
         .define_method("id", &PhenomatrixPair::id)
+        .define_method("size", &PhenomatrixPair::size)
         .define_method("source_id", &PhenomatrixPair::id)
         .define_method("predict_id", &PhenomatrixPair::predict_id)
         .define_method("predict_matrix_id", &PhenomatrixPair::predict_id)
         .define_method("distance", &PhenomatrixPair::distance)
-        .define_method("tf_idf",
-            &PhenomatrixPair::tf_idf,
-            (Arg("i"), Arg("j"), Arg("idf_threshold") = (double)(0.0))
-        )
-        .define_method("inverse_document_frequency",
-            &PhenomatrixPair::inverse_document_frequency,
-            (Arg("i"), Arg("threshold") = (double)(0.0))
-        )
+        .define_method("inverse_document_frequency", &PhenomatrixPair::inverse_document_frequency)
+        .define_method("source_document_vector", &PhenomatrixPair::source_document_vector)
+        .define_method("predict_document_vector", &PhenomatrixPair::predict_document_vector)
         .define_method("nearest", &PhenomatrixPair::nearest)
         .define_method("min_genes", &PhenomatrixPair::min_genes)
         .define_method("min_observations_count", &PhenomatrixPair::min_observations_count)
@@ -60,6 +52,6 @@ Data_Type<PhenomatrixPair> rb_cPhenomatrixPair =
         .define_method("push_mask", &PhenomatrixPair::push_mask)
         .define_method("pop_mask", &PhenomatrixPair::pop_mask)
         .define_method("distance_function=", &PhenomatrixPair::set_distance_function)
+        .define_method("distance_function", &PhenomatrixPair::get_distance_function)
         .define_method("distance_threshold=", &PhenomatrixPair::set_distance_threshold)
-        .define_method("distance_threshold", &PhenomatrixPair::distance_threshold)
-        ;
+        .define_method("distance_threshold", &PhenomatrixPair::distance_threshold);

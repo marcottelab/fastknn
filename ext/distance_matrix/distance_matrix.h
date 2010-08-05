@@ -84,7 +84,22 @@ public:
     // As initialized, min number of genes
     size_t min_genes() const { return min_genes_; }
 
+
+    // Sets the [idf] threshold for TF-IDF on each matrix pair.
+    void set_distance_threshold(float t) {
+        BOOST_FOREACH( PhenomatrixPair& source_pair, source_matrices ) {
+            source_pair.set_distance_threshold(t);
+        }
+    }
 #ifdef RICE
+    Rice::Object distance_thresholds() {
+        Rice::Hash h;
+        BOOST_FOREACH(const PhenomatrixPair& source_pair, source_matrices) {
+            h[ to_ruby<uint>(source_pair.id()) ] = to_ruby<float>(source_pair.distance_threshold());
+        }
+        return h;
+    }
+    
     void set_distance_function(Rice::Object dfn) {
         set_distance_function_str(from_ruby<Rice::Symbol>(dfn).str());
     }
