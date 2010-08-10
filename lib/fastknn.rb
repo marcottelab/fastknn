@@ -54,6 +54,8 @@ module Fastknn
       h << ["predict_matrix_id", self.predict_matrix_id]
       h << ["size", self.size]
       h << ["min_genes", "[#{self.min_genes.join(",")}]"]
+      h << ["min_idf", self.min_idf]
+      h << ["distance_function", ":#{self.distance_function.to_sym}"]
       h.concat additional_h
 
       "#<#{self.class} " + h.collect { |pair| pair.join(": ") }.join(", ") + ">"
@@ -68,10 +70,14 @@ module Fastknn
   class DistanceMatrix
     alias :predict_matrix_id :id
     def inspect additional_h = []
+      dfn_strings = self.distance_functions.collect {|v,d| ":#{d}" }
+
       h = []
       h << ["id", self.id]
       h << ["source_matrix_ids", "[#{self.source_matrix_ids.join(",")}]"]
       h << ["min_genes", self.min_genes]
+      h << ["min_idfs", many_to_one(self.min_idfs.values)]
+      h << ["distance_functions", many_to_one(self.distance_functions.values)]
       h.concat additional_h
 
       "#<#{self.class} " + h.collect { |pair| pair.join(": ") }.join(", ") + ">"
@@ -79,6 +85,16 @@ module Fastknn
 
     def to_cache_key
       "#{self.predict_matrix_id}:#{self.source_matrix_ids.sort.join(',')}:#{self.min_genes}"
+    end
+  protected
+    # Take many items that are likely to be the same and describe them as a single
+    # item or just 'variable'
+    def many_to_one arr
+      if arr.uniq.size == 1
+        arr.first
+      else
+        '(variable)'
+      end
     end
   end
 
