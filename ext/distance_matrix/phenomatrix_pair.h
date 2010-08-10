@@ -10,10 +10,13 @@
 #include <iostream>
 #include <stack>
 #include <list>
-#include <boost/foreach.hpp>
 #include <cmath>
 #include <vector>
+
+#include <boost/foreach.hpp>
+#include <boost/algorithm/string/join.hpp>
 #include <boost/tuple/tuple.hpp>
+
 using std::vector;
 using std::log;
 using std::sqrt;
@@ -54,6 +57,15 @@ typedef std::list<PhenomatrixPair>          matrix_list;
 class PhenomatrixPair;
 
 tuple<size_t, size_t, size_t> sparse_drawn_defective_nnz(const sparse_document_vectors&);
+
+// Return a list of keys from some type of map, unordered_map, multimap, etc.
+template <typename map_T>
+std::list<typename map_T::key_type> keys(const map_T& map) {
+    std::list<typename map_T::key_type> res;
+    for (typename map_T::const_iterator it = map.begin(); it != map.end(); ++it)
+        res.push_back(it->first);
+    return res;
+}
 
 double hypergeometric(const PhenomatrixPair* const, uint, uint);
 double manhattan(const PhenomatrixPair* const, uint, uint);
@@ -204,6 +216,19 @@ protected:
         choices["sorensen"]             = &sorensen;
         choices["cosine"]               = &cosine_similarity;
         choices["tanimoto"]             = &tanimoto_coefficient;
+
+        if (choices.find(distance_measure) == choices.end()) {
+            string err = "phenomatrix_pair.h: switch_distance_function: Could not identify supplied distance function '"
+                         + distance_measure + "'; Choices are: ";
+            err += boost::algorithm::join(keys(choices), ", ");
+#ifdef RICE
+            err += ". Please provide, if possible, as a symbol (e.g., :hypergeometric instead of 'hypergeometric').";
+            throw Rice::Exception(rb_eArgError, err.c_str());
+#else
+            cerr << err << endl;
+            throw;
+#endif
+        }
 
         return choices[distance_measure];
     }
