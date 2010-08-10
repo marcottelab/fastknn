@@ -4,8 +4,11 @@ require "fastknn"
 #predict_matrix = Fastknn.fetch_predict_matrix(185,3)
 #source_matrix  = Fastknn.fetch_source_matrix(3)
 #pair           = Fastknn.fetch_matrix_pair(185,3)
-pair = Fastknn::fetch_matrix_pair(185,3)
-dm   = Fastknn::fetch_distance_matrix(185,3)
+#pair = Fastknn::fetch_matrix_pair(185,3)
+dm   = Fastknn::fetch_distance_matrix(247,[255],2)
+dm.distance_function = :hyper # clearly wrong
+dm.knearest(9831, 10)
+
 STDERR.puts "Done"
 #pair = Fastknn::PhenomatrixPair.new(185,3)
 #d ||= Fastknn::DistanceMatrix.new(185, pair)

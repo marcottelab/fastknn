@@ -14,6 +14,7 @@ Data_Type<PhenomatrixBase> rb_cPhenomatrixBase =
         .define_method("column_ids", &PhenomatrixBase::column_ids)
         .define_method("child_ids", &PhenomatrixBase::child_ids)
         .define_method("child_row_ids", &PhenomatrixBase::child_row_ids)
+        //.define_method("document_vector", &PhenomatrixBase::document_vector) // Needs a pointer, useless in Ruby.
         .define_method("inverse_document_frequency",
             &PhenomatrixBase::inverse_document_frequency,
             (Arg("i"), Arg("threshold") = 0.0)

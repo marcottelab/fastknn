@@ -32,10 +32,29 @@ PhenomatrixBase::PhenomatrixBase(const PhenomatrixBase& rhs, const id_set& remov
 sparse_document_vector PhenomatrixBase::document_vector(uint j, const PhenomatrixPair* const idf_owner) const {
     id_set j_obs = observations(j);
 
-    sparse_document_vector v(row_ids_.size(), j_obs.size());
+    // This is not the cleanest container type to use here. Initially, I had set
+    // the size to row_ids_.size(), but that was problematic because certain genes (esp. for At)
+    // had IDs way above that size. These were getting lost! Now, it sets size
+    // as the maximum row id.
+    // compressed_vector is a component of compressed_matrix, which uses "Compressed Row Storage"
+    // from NetLib: http://www.netlib.org/linalg/html_templates/node91.html
+    // Based on that piece of information, it looks as if empty rows do not matter
+    // at all. As such, it should be perfectly safe to set an insanely high size,
+    // though I wonder why this type needs one at all.
+    // Oops. What is the type on unbounded_array? I have a question pending on stackoverflow,
+    // but for now I'll leave this as is.
+    sparse_document_vector v(*(row_ids_.rbegin()) + 1, j_obs.size());
     for (id_set::const_iterator it = j_obs.begin(); it != j_obs.end(); ++it) {
-        v[*it] = idf_owner->inverse_document_frequency(*it) / (double)(j_obs.size());
+        double d = idf_owner->inverse_document_frequency(*it) / (double)(j_obs.size());
+        v.insert_element(*it, d); // faster than v[*it], I speculate based on: http://www.guwi17.de/ublas/matrix_sparse_usage.html
+        // cerr << "v: " << *it << "\t" << const_castv[*it] << endl; // REMOVE ME
     }
+/*    cerr << "Next:" << endl;
+
+    for (sparse_document_vector::const_iterator it = v.begin(); it != v.end(); ++it) {
+        cerr << "v: " << it.index() << "\t" << *it << endl; // REMOVE ME
+    }
+    cerr << "j_obs size = " << j_obs.size() << endl; */
 
     return v;
 }

@@ -22,6 +22,14 @@ Data_Type<PhenomatrixPair> phenomatrix_pair_type;
 //    return *d;
 //}
 
+template<> // not tested.
+Rice::Object to_ruby<sparse_document_vectors >(sparse_document_vectors const & d) {
+    Rice::Array ary;
+    ary.push(d.first);
+    ary.push(d.second);
+    return ary;
+}
+
 template<>
 Rice::Object to_ruby<pair<size_t, size_t> >(pair<size_t, size_t> const & d) {
     Rice::Array ary;
