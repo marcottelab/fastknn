@@ -6,7 +6,7 @@ require 'rake/testtask'
 require 'hoe'
 
 PKG = "fastknn"
-PKG_VERSION = [0,0,13]
+PKG_VERSION = [0,0,14]
 AUTHOR = "John O. Woods, Marcotte Lab"
 EMAIL = "john.woods@marcottelab.org"
 HOMEPAGE = "http://github.com/MarcotteLabGit/fastknn"

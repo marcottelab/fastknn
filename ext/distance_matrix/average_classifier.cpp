@@ -42,7 +42,5 @@ void AverageClassifier::predict_column(pcolumn& ret, uint j) const {
 
     // Average the scores
     for (pcolumn::iterator it = ret.begin(); it != ret.end(); ++it)
-        ret[*it] /= q_size;
-
-    return ret;
+        it->second /= q_size;
 }
