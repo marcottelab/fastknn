@@ -72,13 +72,12 @@ protected:
 
 class AverageClassifier : public Classifier {
 public:
-    AverageClassifier(const DistanceMatrix* const, size_t, float, float);
+    AverageClassifier(const DistanceMatrix* const, size_t, float);
     virtual ~AverageClassifier() { }
 protected:
     virtual void predict_column(pcolumn& ret, uint j) const;
     size_t k;
     float max_distance;
-    float distance_exponent;
 };
 
 
@@ -88,6 +87,7 @@ public:
     virtual ~NaiveBayes() { }
 protected:
     virtual void predict_column(pcolumn& ret, uint j) const;
+    float distance_exponent;
 };
 
 

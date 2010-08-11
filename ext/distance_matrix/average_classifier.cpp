@@ -2,8 +2,8 @@
 
 
 // This is the NaiveBayes constructor as well.
-AverageClassifier::AverageClassifier(const DistanceMatrix* const rhs, size_t k_, float max_distance_, float distance_exponent_)
-        : Classifier(rhs), k(k_), max_distance(max_distance_), distance_exponent(distance_exponent_) { }
+AverageClassifier::AverageClassifier(const DistanceMatrix* const rhs, size_t k_, float max_distance_)
+        : Classifier(rhs), k(k_), max_distance(max_distance_) { }
 
 
 // Note that this function considers 0 to be the best score. It will be inverted
@@ -34,8 +34,8 @@ void AverageClassifier::predict_column(pcolumn& ret, uint j) const {
             // (inside the Mult operator)
             float score_mod = std::pow(kth_j2.distance, (double)(distance_exponent) );
 
-            if (ret_it == ret.end()) ret[*it] = score_mod;         // insert
-            else                     ret_it->second += score_mod;  // average
+            if (ret_it == ret.end()) ret[*it] = 1;         // insert
+            else                     ret_it->second += 1;  // average
         }
         q.pop(); // move on to the next nearest item
     }

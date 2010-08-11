@@ -2,8 +2,7 @@
 
 
 NaiveBayes::NaiveBayes(const DistanceMatrix* const rhs, size_t k_, float max_distance_, float distance_exponent_)
-        : AverageClassifier(rhs, k_, max_distance_, distance_exponent_)
-{ }
+        : AverageClassifier(rhs, k_, max_distance_), distance_exponent(distance_exponent_) { }
 
 
 // Note that this function considers 0 to be the best score. It will be inverted

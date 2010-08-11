@@ -90,7 +90,7 @@ void DistanceMatrix::construct_classifier(const classifier_params& classifier_pa
     if (classifier_params.classifier == "naivebayes")
         classifier = new NaiveBayes(this, classifier_params.k, classifier_params.max_distance, classifier_params.distance_exponent);
     else if (classifier_params.classifier == "average")
-        classifier = new AverageClassifier(this, classifier_params.k, classifier_params.max_distance, classifier_params.distance_exponent);
+        classifier = new AverageClassifier(this, classifier_params.k, classifier_params.max_distance);
     else if (classifier_params.classifier == "simple")
         classifier = new SimpleClassifier(this);
     else {
