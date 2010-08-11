@@ -45,6 +45,7 @@ sparse_document_vector PhenomatrixBase::document_vector(uint j, const Phenomatri
     // but for now I'll leave this as is.
     sparse_document_vector v(*(row_ids_.rbegin()) + 1, j_obs.size());
     for (id_set::const_iterator it = j_obs.begin(); it != j_obs.end(); ++it) {
+        cerr << "phenomatrix_base.cpp: document_vector: IDF for " << *it << "\t" << idf_owner->inverse_document_frequency(*it) << "\tdenom: " << j_obs.size() << endl;
         double d = idf_owner->inverse_document_frequency(*it) / (double)(j_obs.size());
         v.insert_element(*it, d); // faster than v[*it], I speculate based on: http://www.guwi17.de/ublas/matrix_sparse_usage.html
         // cerr << "v: " << *it << "\t" << const_castv[*it] << endl; // REMOVE ME

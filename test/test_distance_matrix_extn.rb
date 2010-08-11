@@ -7,7 +7,7 @@ require "fastknn"
 
 class TestDistanceMatrixExtn < Test::Unit::TestCase
   def setup
-    STDERR.puts "TestDistanceMatrixExtn"
+    #STDERR.puts "TestDistanceMatrixExtn"
     # Predicting human
     @@d ||= Fastknn.fetch_distance_matrix(185, [3], 2)
     @@d.classifier = {:classifier => :naivebayes, :k => 10, :max_distance => 1, :distance_exponent => 1}
@@ -88,8 +88,29 @@ class TestDistanceMatrixExtn < Test::Unit::TestCase
   end
 
   def test_predict
-    assert @@d.predict(12).size == 15570
+    r = @@d.predict(12)
+    s = r.collect{ |k,v| k if v > 0.0 }.compact.sort.uniq
+    assert r.size == 15570
+    assert s.size == 1350
     assert @@dat.predict(9831).size == 9388
+  end
+
+  def test_predict_with_min_idf
+    min_idfs = @@d.min_idfs.collect{ |k,v| v }.uniq
+    assert min_idfs.size == 1
+    assert min_idfs.first == 0.0
+
+    # Change min idf and confirm that it is changed.
+    @@d.min_idf = 5.0
+    min_idfs = @@d.min_idfs.collect{ |k,v| v }.uniq
+    assert min_idfs.size == 1
+    assert min_idfs.first == 5.0
+
+    r = @@d.predict(12)
+    assert r.size == 15570
+    s = r.collect{ |k,v| k if v > 0.0 }.compact.sort.uniq
+    assert s.size == 1245
+    @@d.min_idf = 0.0
   end
 
   def test_push_and_pop_mask

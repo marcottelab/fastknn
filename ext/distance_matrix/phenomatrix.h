@@ -93,17 +93,11 @@ public:
     // Inverse Document Frequency for TF-IDF. Discretizes: threshold, by default,
     // is 0.0; but if you set it higher, everything that does not meet the threshold
     // will be treated as 0.
-    double inverse_document_frequency(uint i, float idf_threshold) const {
+/*    double inverse_document_frequency(uint i, float idf_threshold) const {
         double idf = log( column_count() / (double)(term_count(i)) );
         if (idf < idf_threshold) return 0.0;
         else                     return idf;
-    }
-
-    //    // Calculate TF-IDF just based on this matrix for a given gene/phenotype.
-    //    double tf_idf(uint i, uint j, float idf_threshold = 0.0) const {
-    //        if (!has_row(i) || !has_column(j)) return 0.0;
-    //        return inverse_document_frequency(i, idf_threshold) / (double)(observations_size(j));
-    //    }
+    } */
 
     // Return a TF-IDF sparse vector for some column (phenotype).
     sparse_document_vector document_vector(uint, const PhenomatrixPair* const) const;
@@ -279,7 +273,17 @@ protected:
     }
 
     string fetch_matrix_type() const {
-        return Connection::instance().fetch_type("matrices", id_);
+        try { // There may be a better place for this exception. We shall see.
+            return Connection::instance().fetch_type("matrices", id_);
+        } catch(...) {
+            string err = "It appears that the given matrix id (" + lexical_cast<string>(id_) + ") is not in the database.";
+#ifdef RICE
+            throw Rice::Exception(rb_eArgError, err.c_str());
+#else
+            cerr << err << endl;
+            throw;
+#endif
+        }
     }
 
     map<uint,string> fetch_child_ids(uint matrix_id) const {

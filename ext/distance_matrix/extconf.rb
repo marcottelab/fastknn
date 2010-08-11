@@ -14,6 +14,8 @@ end
 
 $CPPFLAGS += " -DRICE -DNDEBUG"
 $CXXFLAGS += " -O3 -DNDEBUG"
+#$CPPFLAGS += " -DRICE -g3 -O0"
+#$CXXFLAGS += " -O0 -g3"
 
 $objs = [
   "distance_matrix.o",

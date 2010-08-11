@@ -165,7 +165,7 @@ module Fastknn
     item
   end
 
-  def self.crossvalidate predict_matrix_id, source_matrix_ids, min_genes = 2, distfn = :hypergeometric, classifier_options = {}, dir = "tmp/fastknn"
+  def self.crossvalidate predict_matrix_id, source_matrix_ids, min_genes = 2, distfn = :hypergeometric, min_idf = 0.0, classifier_options = {}, dir = "tmp/fastknn"
     opts = {
       :classifier   => :naivebayes,
       :k            => 10,
@@ -175,6 +175,7 @@ module Fastknn
     dm = Fastknn.fetch_distance_matrix(predict_matrix_id, source_matrix_ids, min_genes)
     dm.classifier        = opts
     dm.distance_function = distfn
+    dm.min_idf           = min_idf
 
     puts "Current dir = #{Dir.pwd}"
 
