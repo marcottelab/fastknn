@@ -241,6 +241,33 @@ double tanimoto_coefficient(const PhenomatrixPair* const p, uint j1, uint j2) {
     else return 1.0 - sim;
 }
 
+// Determine the manhattan magnitude of a vector (sum of its elements).
+double manhattan_magnitude(const sparse_document_vector& v) {
+    typedef sparse_document_vector::const_iterator sdv_iter;
+    
+    double accum = 0.0;
+    for (sdv_iter it = v.begin(); it != v.end(); ++it)
+        accum += std::abs(*it);
+
+    return accum;
+}
+
+// Sample Pearson correlation coefficient.
+double pearson(const PhenomatrixPair* const p, uint j1, uint j2) {
+    using boost::numeric::ublas::inner_prod;
+    sparse_document_vectors v1v2 = p->document_vectors(j1, j2);
+
+    double xy = inner_prod(v1v2.first, v1v2.second);
+    double xx = inner_prod(v1v2.first, v1v2.first);
+    double yy = inner_prod(v1v2.second, v1v2.second);
+    double magx = manhattan_magnitude(v1v2.first);
+    double magy = manhattan_magnitude(v1v2.second);
+
+    size_t n = p->max_intersection_size();
+
+    return (n*xy - magx * magy) / sqrt((n*xx - magx*magx) * (n*yy - magy*magy));
+}
+
 
 double jaccard(const PhenomatrixPair* const p, uint j1, uint j2) {
     std::pair<size_t,size_t> obs_j1_j2 = p->observations_sizes(j1,j2);
@@ -292,15 +319,8 @@ double manhattan(const PhenomatrixPair* const p, uint j1, uint j2) {
     using boost::numeric::ublas::inner_prod;
     sparse_document_vectors v1v2 = p->document_vectors(j1, j2);
     sparse_document_vector v3(v1v2.first - v1v2.second);
-
-    double accum = 0.0;
-
-    typedef sparse_document_vector::const_iterator sdv_iter;
-
-    for (sdv_iter it = v3.begin(); it != v3.end(); ++it)
-        accum += std::abs(*it);
     
-    return accum / (double)(p->max_intersection_size());
+    return manhattan_magnitude(v3) / (double)(p->max_intersection_size());
 }
 
 // Exposes euclidean(m,n,k,N) and PhenomatrixPair to eachother.

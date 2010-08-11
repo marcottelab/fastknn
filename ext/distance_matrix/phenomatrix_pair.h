@@ -67,7 +67,10 @@ std::list<typename map_T::key_type> keys(const map_T& map) {
     return res;
 }
 
+double manhattan_magnitude(const sparse_document_vector&);
+
 double hypergeometric(const PhenomatrixPair* const, uint, uint);
+double pearson(const PhenomatrixPair* const, uint, uint);
 double manhattan(const PhenomatrixPair* const, uint, uint);
 double euclidean(const PhenomatrixPair* const, uint, uint);
 double cosine_similarity(const PhenomatrixPair* const, uint, uint);
@@ -177,6 +180,7 @@ public:
         choices[&hypergeometric]     = "hypergeometric";
         choices[&euclidean]          = "euclidean";
         choices[&manhattan]          = "manhattan";
+        choices[&pearson]            = "pearson";
         choices[&jaccard]            = "jaccard";
         choices[&sorensen]           = "sorensen";
         choices[&cosine_similarity]  = "cosine";
@@ -212,6 +216,7 @@ protected:
         choices["hypergeometric"]       = &hypergeometric;
         choices["euclidean"]            = &euclidean;
         choices["manhattan"]            = &manhattan;
+        choices["pearson"]              = &pearson;
         choices["jaccard"]              = &jaccard;
         choices["sorensen"]             = &sorensen;
         choices["cosine"]               = &cosine_similarity;
