@@ -22,11 +22,12 @@ $objs = [
   "hypergeometric.o",
   "classifier.o",
   "simple_classifier.o",
+  "average_classifier.o",
+  "naive_bayes.o",
   "phenomatrix.o",
   "phenomatrix_pair.o",
   "connection.o",
   "id_dist.o",
-  "naive_bayes.o",
   "fusion_phenomatrix.o",
   "similarity.o"]
 

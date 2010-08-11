@@ -70,15 +70,23 @@ protected:
 };
 
 
-class NaiveBayes : public Classifier {
+class AverageClassifier : public Classifier {
 public:
-    NaiveBayes(const DistanceMatrix* const, size_t, float, float);
-    virtual ~NaiveBayes() { }
+    AverageClassifier(const DistanceMatrix* const rhs);
+    virtual ~AverageClassifier() { }
 protected:
     virtual void predict_column(pcolumn& ret, uint j) const;
     size_t k;
     float max_distance;
     float distance_exponent;
+};
+
+
+class NaiveBayes : public AverageClassifier {
+public:
+    virtual ~NaiveBayes() { }
+protected:
+    virtual void predict_column(pcolumn& ret, uint j) const;
 };
 
 

@@ -1,22 +1,23 @@
 #include "classifier.h"
 
-// CONSTRUCTOR is now the same as for AverageClassifier.
+
+// This is the NaiveBayes constructor as well.
+AverageClassifier::AverageClassifier(const DistanceMatrix* const rhs, size_t k_, float max_distance_, float distance_exponent_)
+        : Classifier(rhs), k(k_), max_distance(max_distance_), distance_exponent(distance_exponent_) { }
 
 
 // Note that this function considers 0 to be the best score. It will be inverted
 // later.
 // Classifier does not take into account min_idf in its integration. This value
 // only affects the actual "distance" calculation, not predictions.
-void NaiveBayes::predict_column(pcolumn& ret, uint j) const {
+void AverageClassifier::predict_column(pcolumn& ret, uint j) const {
     // Get the k-nearest columns
     proximity_queue q = d->knearest(j, k, (double)(max_distance));
 
+    float q_size = (float)(q.size());
+
     while (q.size() > 0) {
         id_dist_iter kth_j2 = q.top(); // get first  of the k-nearest columns
-
-        // Get the observations in those columns
-        size_t masked_j2_obs_size = kth_j2.matrix_iter->observations( kth_j2.id ).size();
-        double masked_intersection_over_total = kth_j2.matrix_iter->intersection( j, kth_j2.id ).size() / double(masked_j2_obs_size);
 
         // Now that we've calculated the necessary values for the hypergeometric,
         // let's figure out the matrix we actually want to predict from, and get
@@ -31,12 +32,17 @@ void NaiveBayes::predict_column(pcolumn& ret, uint j) const {
 
             // THIS IS THE ACTUAL NAIVE BAYES FORMULA!
             // (inside the Mult operator)
-            float score_mod = (1.0 - masked_intersection_over_total * (1.0 - std::pow(kth_j2.distance, (double)(distance_exponent) )));
+            float score_mod = std::pow(kth_j2.distance, (double)(distance_exponent) );
 
             if (ret_it == ret.end()) ret[*it] = score_mod;         // insert
-            else                     ret_it->second *= score_mod;  // multiply
+            else                     ret_it->second += score_mod;  // average
         }
         q.pop(); // move on to the next nearest item
     }
-}
 
+    // Average the scores
+    for (pcolumn::iterator it = ret.begin(); it != ret.end(); ++it)
+        ret[*it] /= q_size;
+
+    return ret;
+}
