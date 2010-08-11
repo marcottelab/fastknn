@@ -30,10 +30,6 @@ void AverageClassifier::predict_column(pcolumn& ret, uint j) const {
         for (id_set::const_iterator it = kth_j2_obs.begin(); it != kth_j2_obs.end(); ++it) {
             pcolumn::iterator ret_it = ret.find(*it);
 
-            // THIS IS THE ACTUAL NAIVE BAYES FORMULA!
-            // (inside the Mult operator)
-            float score_mod = std::pow(kth_j2.distance, (double)(distance_exponent) );
-
             if (ret_it == ret.end()) ret[*it] = 1;         // insert
             else                     ret_it->second += 1;  // average
         }
