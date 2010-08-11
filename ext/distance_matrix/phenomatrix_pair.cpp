@@ -265,7 +265,7 @@ double pearson(const PhenomatrixPair* const p, uint j1, uint j2) {
 
     size_t n = p->max_intersection_size();
 
-    return (n*xy - magx * magy) / sqrt((n*xx - magx*magx) * (n*yy - magy*magy));
+    return 1.0 - std::abs(n*xy - magx * magy) / sqrt((n*xx - magx*magx) * (n*yy - magy*magy));
 }
 
 
