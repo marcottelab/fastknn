@@ -11,10 +11,15 @@ AverageClassifier::AverageClassifier(const DistanceMatrix* const rhs, size_t k_,
 // Classifier does not take into account min_idf in its integration. This value
 // only affects the actual "distance" calculation, not predictions.
 void AverageClassifier::predict_column(pcolumn& ret, uint j) const {
+    typedef map<uint,float> opcolumn; // ordered phenotype column
+
     // Get the k-nearest columns
     proximity_queue q = d->knearest(j, k, (double)(max_distance));
 
     float q_size = (float)(q.size());
+
+    opcolumn oret; // ordered map of return values
+
 
     while (q.size() > 0) {
         id_dist_iter kth_j2 = q.top(); // get first  of the k-nearest columns
@@ -28,15 +33,15 @@ void AverageClassifier::predict_column(pcolumn& ret, uint j) const {
         // score in applicable predict matrix cells using those observations and
         // the masked distance calculation.
         for (id_set::const_iterator it = kth_j2_obs.begin(); it != kth_j2_obs.end(); ++it) {
-            pcolumn::iterator ret_it = ret.find(*it);
+            opcolumn::iterator oret_it = oret.find(*it);
 
-            if (ret_it == ret.end()) ret[*it] = 1;         // insert
-            else                     ret_it->second += 1;  // average
+            if (oret_it == oret.end()) oret[*it] = 1;         // insert
+            else                       oret_it->second += 1;  // average
         }
         q.pop(); // move on to the next nearest item
     }
 
-    // Average the scores
-    for (pcolumn::iterator it = ret.begin(); it != ret.end(); ++it)
-        it->second /= q_size;
+    // Average the scores and invert them, then insert them in the return unordered_map
+    for (opcolumn::iterator it = oret.begin(); it != oret.end(); ++it)
+        ret[it->first] = 1.0 - (it->second / q_size);
 }
