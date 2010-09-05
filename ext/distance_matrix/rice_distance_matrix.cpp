@@ -27,12 +27,15 @@
                            ( Arg("dir"),
                              Arg("j"),
                              Arg("write_rows"))                )
+            .define_method("prepare_filesystem", &DistanceMatrix::prepare_filesystem_for_crossvalidation)
             .define_method("push_mask", &DistanceMatrix::push_mask)
             .define_method("pop_mask", &DistanceMatrix::pop_mask)
             .define_method("predict_matrix_has_column?", &DistanceMatrix::predict_matrix_has_column)
+            .define_method("predict_and_write_column", &DistanceMatrix::predict_and_write)
             .define_method("predictable_columns", &DistanceMatrix::predictable_columns)
             .define_method("predict_matrix", &DistanceMatrix::predict_matrix)
             .define_method("source_matrix_pairs", &DistanceMatrix::source_matrix_pairs)
             .define_method("crossvalidate", &DistanceMatrix::crossvalidate)
             .define_method("min_genes", &DistanceMatrix::min_genes)
+            .define_method("child_row_ids", &DistanceMatrix::child_row_ids)
             ;

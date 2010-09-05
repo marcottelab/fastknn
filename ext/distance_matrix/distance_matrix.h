@@ -120,7 +120,7 @@ public:
     // Native C++ cross-validate function. Probably doesn't add much in terms of
     // speed to the native Ruby, but wrote it to simplify debugging.
     void crossvalidate() {
-        map<uint, id_set> child_row_sets = predict_matrix_.child_row_ids();
+        map<uint, id_set> child_row_sets = child_row_ids();
 
         // Create crossvalidation subdirectories
         prepare_filesystem_for_crossvalidation(child_row_sets.size());
@@ -151,6 +151,10 @@ public:
             fold_count++;
         }
 
+    }
+
+    map<uint, id_set> child_row_ids() const {
+        return predict_matrix_.child_row_ids();
     }
 
     // Removes rows from the matrices on which we're calculating distances.
@@ -343,6 +347,19 @@ public:
         return predict_matrix_.column_ids();
     }
 
+    // Create a number of predictions directories in which to store output.
+    //
+    // Before creation, old directories matching predictions[0-9]+ will be
+    // deleted.
+    void prepare_filesystem_for_crossvalidation(size_t folds) const {
+        // Delete existing directories matching predictions*
+        delete_old_crossvalidation_filesystem();
+
+        // Create new directories
+        for (size_t f = 0; f < folds; ++f)
+            fs::create_directory("predictions" + lexical_cast<string>(f));
+    }
+
 #ifdef RICE
 
     // Make a copy and return the list of source matrices (PhenomatrixPairs)
@@ -377,19 +394,6 @@ protected:
             throw;
 #endif
         }
-    }
-    
-    // Create a number of predictions directories in which to store output.
-    //
-    // Before creation, old directories matching predictions[0-9]+ will be
-    // deleted.
-    void prepare_filesystem_for_crossvalidation(size_t folds) const {
-        // Delete existing directories matching predictions*
-        delete_old_crossvalidation_filesystem();
-
-        // Create new directories
-        for (size_t f = 0; f < folds; ++f)
-            fs::create_directory("predictions" + lexical_cast<string>(f));
     }
 
     // Delete existing directories matching predictions*
