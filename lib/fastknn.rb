@@ -4,7 +4,20 @@ $:.unshift(File.dirname(__FILE__)) unless
 require "distance_matrix.so"
 
 module Fastknn
-  VERSION = '0.0.17'
+  VERSION = '0.0.18'
+
+  DBARGS  = "host=arrakis.icmb.utexas.edu dbname=crossval_development user=crossval password=youwish1"
+
+  # Get database arguments from ActiveRecord if available. Otherwise, use the default.
+  def self.db_args
+    begin
+      config = ActiveRecord::Base.connection.instance_variable_get(:@config)
+      return "host=#{config[:host]} dbname=#{config[:database]} user=#{config[:username]} password=#{config[:password]}"
+    rescue
+      STDERR.puts "Warning: ActiveRecord not loaded or connection not instantiated. If you're running this from a Rails environment, that's a bug. Using default database settings."
+      return DBARGS
+    end
+  end
 
   # Allow Phenomatrix types to be cached as string keys in a hash
   class PhenomatrixBase
@@ -100,10 +113,10 @@ module Fastknn
 
   # Automatically-called function connects to the database. In the future this needs
   # to be revised to take a connection string from Rails.
-  def self.connect dbstr = "host=localhost dbname=crossval_development user=jwoods password=youwish1"
+  def self.connect
     @@c ||= Fastknn::Connection.new
-    @@c.connect(dbstr)
-    puts "Connected to database"
+    @@c.connect(self.db_args)
+    puts "Fastknn: connected to database successfully"
 
     # Create hashes to store matrices, matrix pairs, and distance matrices
     @@source_matrices ||= {}

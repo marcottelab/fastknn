@@ -232,6 +232,8 @@ protected:
 
         for (omatrix::iterator it = obs.begin(); it != obs.end(); ++it) {
             if (it->second.size() >= min_genes) {
+
+                //cerr << "j=" << it->first << "\t min_genes = " << min_genes << "\tit->second.size() = " << it->second.size() << endl;
                 column_ids_.insert(it->first);
 
                 // Walk through and increment gcount for each gene found.

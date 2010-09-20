@@ -6,7 +6,7 @@ require 'rake/testtask'
 require 'hoe'
 
 PKG = "fastknn"
-PKG_VERSION = [0,0,17]
+PKG_VERSION = [0,0,18]
 AUTHOR = "John O. Woods, Marcotte Lab"
 EMAIL = "john.woods@marcottelab.org"
 HOMEPAGE = "http://github.com/MarcotteLabGit/fastknn"
@@ -88,6 +88,12 @@ namespace :test do
 
   Rake::TestTask.new(:distance_matrix) do |t|
     t.test_files = FileList['test/test_distance_matrix*.rb']
+    t.warning = true
+    t.verbose = true
+  end
+
+  Rake::TestTask.new(:fastknn) do |t|
+    t.test_files = FileList['test/test_fastknn.rb']
     t.warning = true
     t.verbose = true
   end
