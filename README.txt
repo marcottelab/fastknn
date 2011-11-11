@@ -1,6 +1,6 @@
 = fastknn
 
-* http://github.com/#{github_username}/#{project_name}
+* http://github.com/marcottelab/fastknn
 
 == DESCRIPTION:
 

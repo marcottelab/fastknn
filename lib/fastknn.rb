@@ -1,10 +1,17 @@
 $:.unshift(File.dirname(__FILE__)) unless
   $:.include?(File.dirname(__FILE__)) || $:.include?(File.expand_path(File.dirname(__FILE__)))
 
-require "distance_matrix.so"
+abort_connect = false
+
+begin
+  require File.dirname(__FILE__) + "/../ext/distance_matrix/distance_matrix.so"
+rescue LoadError => e
+  warn "Unable to load object file (probably not compiled yet?)"
+  abort_connect = true
+end
 
 module Fastknn
-  VERSION = '0.0.18'
+  VERSION = '0.0.19'
 
   DBARGS  = "host=arrakis.icmb.utexas.edu dbname=crossval_development user=crossval password=youwish1"
 
@@ -18,6 +25,7 @@ module Fastknn
       return DBARGS
     end
   end
+  
 
   # Allow Phenomatrix types to be cached as string keys in a hash
   class PhenomatrixBase
@@ -247,4 +255,4 @@ protected
   end
 end
 
-Fastknn.connect
+Fastknn.connect unless abort_connect
